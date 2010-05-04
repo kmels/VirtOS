@@ -1,0 +1,3 @@
+'loop'
+set r0 1
+jmp r0 loop

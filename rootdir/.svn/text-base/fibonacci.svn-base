@@ -1,0 +1,31 @@
+echo "Calculando fibonacci de: "
+echo r0
+echo "\n"
+
+set r1 0
+set r2 1
+set r3 0
+
+;para decrementar
+set r4 1
+
+;si es 0 salir
+JMP r0 sumar
+set r5 0
+JMP r5 salir
+
+;calcular
+'sumar'
+
+;si no, calcular
+add r3 r1 r2
+set r1 r2
+set r2 r3
+sub r0 r0 r4
+JMP r0 sumar
+
+'salir'
+echo "Respuesta:"
+echo r3
+echo "\n"
+END r3

@@ -1,0 +1,31 @@
+;R0 es el parametro
+;contador
+
+Set R0 10
+
+;valor sumando 1
+Set R1 0
+
+;valor sumando 2
+Set R2 1
+
+;valor a restarle al contador
+Set R4 1
+
+'Sumar'
+Echo "Fibonacci de"
+;establecer en R5, el valor de fibonacci que se esta haciendo
+SET R5 10
+SUB R5 R5 R0
+Echo R5
+Echo " es: "
+Echo R1
+Echo "\n"
+Add R3 R1 R2
+Set R1 R2
+Set R2 R3
+
+;Restarle uno al contador
+Sub R0 R0 R4
+JMP R0 Sumar
+END 1 

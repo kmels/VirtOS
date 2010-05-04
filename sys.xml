@@ -1,0 +1,5 @@
+<sys>
+	<scheduling startQueue="1">
+		<queue id="1" name="Queue1" type="Priority" quantum="4" preemptive="1" queueOnQuantumEnd="2" queueOnIOEnd="1" />
+	</scheduling>
+</sys>

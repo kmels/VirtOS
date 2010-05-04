@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j
+END
+Logger.java
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/Logger.java
+END
+ILoggerFactory.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/ILoggerFactory.java
+END
+Marker.java
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/Marker.java
+END
+IMarkerFactory.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/IMarkerFactory.java
+END
+MDC.java
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/MDC.java
+END
+LoggerFactory.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/LoggerFactory.java
+END
+MarkerFactory.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/MarkerFactory.java
+END
+package.html
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/package.html
+END

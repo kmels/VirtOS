@@ -1,0 +1,23 @@
+; archivo1
+; Lee el contenido de archivo1.txt
+; Parametros r0: Si r0 > 0, Abre archivo 1, de lo contrario abre archivo 2
+; 11/02/2010
+
+jmp r0 archivo1
+
+; Abrir archivo 2
+OpenFile "built to build.txt" r0
+set r1 1
+jmp r1 loop
+
+; Abrir archivo 1
+'archivo1'
+OpenFile "strategic patience.txt" r0
+
+'loop'
+ReadLine r0 r1
+jmp r1 loop
+
+CloseFile r0
+
+End 1

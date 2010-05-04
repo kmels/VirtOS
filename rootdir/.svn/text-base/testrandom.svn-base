@@ -1,0 +1,16 @@
+;random
+
+set r0 20
+set r4 1
+set r1 10
+set r2 15
+
+'calcular'
+random r1 r2 r3
+echo "numero random obtenido: "
+echo r3
+echo "\n"
+sub r0 r0 r4
+jmp r0 calcular
+
+end r3
