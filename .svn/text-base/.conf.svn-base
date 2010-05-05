@@ -1,4 +1,0 @@
-<log>
-    filename = "/Users/kmels/Desarrollo/scala/workspace/kmelsOS/logs/ps.log"
-    roll = "never"
-</log>
