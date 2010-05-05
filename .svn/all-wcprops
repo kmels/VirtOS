@@ -1,0 +1,45 @@
+K 26
+svn:wc:ra_dav:activity-url
+V 19
+/svn/main/!svn/act/
+K 25
+svn:wc:ra_dav:version-url
+V 35
+/svn/main/!svn/ver/13/kmelsOS/trunk
+END
+.classpath
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/main/!svn/ver/5/kmelsOS/trunk/.classpath
+END
+.conf
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/main/!svn/ver/5/kmelsOS/trunk/.conf
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/main/!svn/ver/5/kmelsOS/trunk/.project
+END
+manifest.mf
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/main/!svn/ver/13/kmelsOS/trunk/manifest.mf
+END
+sys.xml
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/main/!svn/ver/22/kmelsOS/trunk/sys.xml
+END
+build.xml
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/main/!svn/ver/13/kmelsOS/trunk/build.xml
+END
