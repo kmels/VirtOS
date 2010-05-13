@@ -1,0 +1,14 @@
+;###############################################
+; Abrir y cerrar un archivo
+;###############################################
+
+
+OpenFile "Archivo de pruebas.txt" r0
+
+'loop'
+ReadLine r0 r1
+jmp r1 loop
+
+CloseFile r0
+
+end 1

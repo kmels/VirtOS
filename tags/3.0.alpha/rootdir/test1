@@ -1,0 +1,24 @@
+; Pruebas de read y write
+
+; posicion de memoria 0
+set r15 0
+set r14 10
+WriteMem r15 r14
+ReadMem r15 r13
+echo r13
+
+; posicion de memoria 1
+set r12 1
+set r11 100
+WriteMem r12 r11
+ReadMem r12 r10
+echo r10
+
+; posicion de memoria 100
+set r9 2
+set r8 1000
+WriteMem r9 r8
+ReadMem r9 r7
+echo r7
+
+end 1

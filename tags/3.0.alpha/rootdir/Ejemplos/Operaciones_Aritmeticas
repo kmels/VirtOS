@@ -1,0 +1,36 @@
+;###############################################
+; Operaciones aritméticas
+;###############################################
+
+set r0 10
+set r1 20
+
+; r2 = r1 + r0 = 30
+add r2 r1 r0
+echo "r2: "
+echo r2
+
+; r3 = r1 - r0 = 10
+sub r3 r1 r0
+echo " r3: "
+echo r3
+
+; r4 = r1 * r0 = 200
+mul r4 r1 r0
+echo " r4: "
+echo r4
+
+; r5 = r1 / r0 = 3 , r6 = 1
+set r1 7
+set r0 2
+div r5 r1 r0 r6
+echo " r5: "
+echo r5
+echo " r6: "
+echo r6
+
+echo "\n"
+
+end 1
+
+; OUTPUT debería ser: r2: 30 r3: 10 r4: 200 r5: 3 r6: 1

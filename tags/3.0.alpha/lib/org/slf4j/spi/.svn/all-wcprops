@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi
+END
+MDCAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi/MDCAdapter.java
+END
+LocationAwareLogger.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi/LocationAwareLogger.java
+END
+LoggerFactoryBinder.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi/LoggerFactoryBinder.java
+END
+MarkerFactoryBinder.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi/MarkerFactoryBinder.java
+END
+package.html
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/main/!svn/ver/5/kmelsOS/trunk/lib/org/slf4j/spi/package.html
+END

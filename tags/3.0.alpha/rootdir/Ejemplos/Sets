@@ -1,0 +1,18 @@
+;###############################################
+; prueba para los sets y echo's
+;###############################################
+
+set r0 1
+set r1 2
+set r2 r1 ; r2 deberia tener 2
+echo "valor de r0: "
+echo r0
+echo "\n"
+echo "valor de r1: "
+echo r1
+echo "\n"
+echo "valor de r2: "
+echo r2
+
+
+end 1

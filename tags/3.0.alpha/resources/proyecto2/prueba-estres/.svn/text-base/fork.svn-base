@@ -1,0 +1,29 @@
+; fork
+; Crea multiples procesos
+; 10/03/2010
+
+; Crear procesos hijos
+Fork "base p1" r1 
+Fork "base p1" r2
+Fork "base p1" r3
+
+'loop'
+
+; Ceder CPU a procesos hijos
+Sleep
+
+; Obtener resultados de procesos hijos
+GetState r1 r4 r5
+GetState r2 r4 r6
+GetState r3 r4 r7
+
+; Procesos hijo terminados tienen resultado = 1
+; Iteramos hasta que los procesos hijos terminen
+Set r0 3
+Sub r0 r0 r5
+Sub r0 r0 r6
+Sub r0 r0 r7
+
+jmp r0 loop
+
+End 1
