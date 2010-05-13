@@ -7,7 +7,8 @@ class debug(entry:List[String],outputObject:core.outputMethod) extends system_pr
 	val entryToDebug = entry
  
   def exec() = {
-    Console.println("Debug va a ejecutar: "+entry.toString)
-    core.shell.exec(0,entryToDebug,output,true)
+    Console.println("Debug va a ejecutar: "+entry.mkString(" "))
+    val programMeta = core.shell.getProgramFromEntry(entry.mkString(" "))
+    core.shell.exec(0,programMeta,true)
   }
 }

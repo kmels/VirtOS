@@ -1,25 +1,17 @@
 package core {
-  
-	
+  	
   import programs.program
   import scala.collection.immutable.{ListSet}
-  import scala.collection.mutable.{Queue,ArrayBuffer,Map}
+  import scala.collection.mutable.{Queue,ArrayBuffer,Map,Buffer}
   import exceptions._
   import util.{schedulingQueue,tickMeta}
- 
+
   /**
    * NOTA: Arreglar queue
    */
   object sys {
     var rootDirectory:String = ""
 
-    def init(root_dir:String){
-      Console.println("Initializing.. rootdir:"+root_dir)
-      shell.start(root_dir)
-      rootDirectory = root_dir
-    }
-
-    
     //Logging
     val tasksLog = new util.Log(rootDirectory+"logs/ps.log")
     tasksLog.info("Tasks log initialized")
@@ -29,6 +21,9 @@ package core {
 
     val ioLog = new util.Log(rootDirectory+"logs/io.log")
     ioLog.info("I/O log initialized")
+
+    val memLog = new util.Log(rootDirectory+"logs/mem.log")
+    memLog.info("Mem log initialized")
 
     var tasksCounter = 0
     val job_queue = new Queue[task] 	//consists of all processes in the system
@@ -41,18 +36,29 @@ package core {
     var fileOwners = scala.collection.mutable.Map[Int,Int]() //file handler id -> task owner id
     var fileNames = scala.collection.mutable.Map[Int,String]() //file handler id -> fileName
     var semaphores = scala.collection.mutable.Map[Int,Int]() //semaphore id -> value
-    
-    object Config{
 
+    //dummy variables
+    var ramSize:Int = -1
+    var pageSize:Int = -1
+    var swapSize:Int = -1
+
+    object Config{
       def load(fileName:String) = {
           bootLog.info("Loading configuration file..")
           //load configuration file sys.xml
           val xmlConfiguration:scala.xml.Elem = scala.xml.XML.load(new java.io.FileInputStream(new java.io.File(rootDirectory+fileName)))
 
+          //search for memory config
+          val memoryXMLElement:scala.xml.NodeSeq = xmlConfiguration \\ "memory"
+          //update dummy variables
+          ramSize = (memoryXMLElement \ "@ram").text.toInt
+          swapSize = (memoryXMLElement \ "@swap").text.toInt
+          pageSize = (memoryXMLElement \ "@page").text.toInt
+          
           //search for the scheduling element
           val scheduling:scala.xml.NodeSeq = xmlConfiguration \\ "scheduling"
           sys.scheduler.startQueue = (scheduling \ "@startQueue").text.toInt
-          bootLog.info("Scheduling has startQueue id: "+sys.scheduler.startQueue)
+          bootLog.info("Scheduling has startQueue id: "+sys.scheduler.startQueue.toString)
 
           val queuesInXML = scheduling \\ "queue"
           val nQueues:Int = queuesInXML.size
@@ -81,6 +87,17 @@ package core {
     }
 
     Config.load("sys.xml")
+    
+    def init(root_dir:String){
+      Console.println("Initializing.. rootdir:"+root_dir)
+      shell.start(root_dir)
+      rootDirectory = root_dir
+    }
+    
+    val pageOwners:Buffer[Int] = Buffer.fill(ramSize)(-1)
+    val memory:Buffer[Buffer[Int]] = Buffer.fill(ramSize)(Buffer.fill(pageSize)(0))
+    val swap:Buffer[Buffer[Int]] = Buffer.fill(swapSize)(Buffer.fill(pageSize)(0))
+    val swapOwners:Buffer[Int] = Buffer.fill(swapSize)(-1)
 
     scheduler.start()
 
@@ -91,9 +108,67 @@ package core {
 
     def getNewProcessId:Int = tasksCounter
 
-    def getNewTask(parentTaskId:Int,programToExecute:programs.program,priority:Int,doVerbose:Boolean) = {
+    def getFramesForNewTask(howMany:Int,taskId:Int,parentId:Int):List[Int] = {
+      memLog.info("task "+taskId.toString+" is asking for "+howMany.toString+" frames")
+
+      val assignedFrames:List[Int] =
+        if (parentId!=0){
+          memLog.info("task's parent found: "+parentId.toString+", sharing frames")
+          tasksList(parentId).frames.map(_._2).toList
+        } else{
+          val emptyPages = pageOwners.zipWithIndex.filter(_._1<0)
+          memLog.info(emptyPages.size+" free frames were found: "+emptyPages.map(_._2).toList.mkString(","))
+          if (emptyPages.size>=howMany){
+            memLog.info("assigning free frames")
+            val emptyFramesAssigned:List[Int] = emptyPages.slice(0, howMany).map(assignedPage => assignedPage._2).toList
+            emptyFramesAssigned
+          } else{
+            memLog.info("trying to swap in/out")
+            val swapUsed = swapOwners.find(_ > (-1)).size
+            memLog.info("swap used: "+swapUsed.toString)
+            val freeSwap = swapSize - swapUsed
+            val freeSwapFramesIndexes = swapOwners.zipWithIndex.filter(_._1 < 0).map(_._2)
+            memLog.info("free swap frames: "+freeSwapFramesIndexes.mkString(","))
+
+            val pagesNotOwnedByCurrentTask:List[Int] = pageOwners.zipWithIndex.filter(_._1!=taskId).map(frame => frame._2).toList
+            val swapedOutFrames = pagesNotOwnedByCurrentTask.slice(0,howMany)
+            memLog.info("frames not owned by task asking for frames: "+pagesNotOwnedByCurrentTask.mkString(","))
+
+            if (swapUsed < swapSize && freeSwap >= swapedOutFrames.size) {
+              //swap out some
+              memLog.info("swaping in and out frames")            
+              memLog.info("swaping out frames from memory: "+swapedOutFrames.mkString(","))
+              //falta poner el taskid.frames mapeadas a swap
+              swapedOutFrames.foreach(swapedOutFrame => {
+                  //find first which is free
+                  val freeSwapFrames = swapOwners.zipWithIndex.filter(_._1 < 0)
+                  val freeSwapFrame = freeSwapFrames.head
+                  val indexToUpdate = freeSwapFrame._2
+                  swapOwners(indexToUpdate) = pageOwners(swapedOutFrame)
+                  memLog.info("swaping in swap frame "+indexToUpdate)
+                  swap(indexToUpdate) = memory(swapedOutFrame)
+              })
+
+              swapedOutFrames
+            } else{
+              memLog.info("not enough swap space")
+              //return empty list
+              List()
+            }
+          }
+        }
+
+       memLog.info("assigned frames: "+assignedFrames.mkString(","))
+       assignedFrames.foreach(assignedPage => pageOwners(assignedPage) = taskId)
+       memLog.info("frame owners table updated")
+       memLog.info("memory owners: "+pageOwners.mkString(","))
+       memLog.info("swap owners: "+swapOwners.mkString(","))
+       assignedFrames
+    }
+
+    def getNewTask(parentTaskId:Int,programToExecute:programs.program,priority:Int,pagesNeeded:Int,doVerbose:Boolean) = {
       tasksCounter += 1
-      new task(parentTaskId,getNewProcessId,programToExecute,registers,priority,doVerbose)
+      new task(parentTaskId,getNewProcessId,programToExecute,registers,priority,pagesNeeded,doVerbose)
     }
 
     /*
@@ -181,6 +256,12 @@ package core {
               tasksToKill -= currentTask.id
               sys.tasksLog("Killing current task with value -1")
 
+              //free ram
+              val framesOwnedByTaskToKill = pageOwners.zipWithIndex.filter(_._1==currentTask.id).map(_._2).toList
+              memLog.info("killing task "+currentTask.id+", frames owned: "+framesOwnedByTaskToKill.mkString(","))
+
+              framesOwnedByTaskToKill.foreach(frameIndex => pageOwners(frameIndex) = -1 )
+
               //remove from the queue (kill it)
               val deQueuedTask = activeSchedulingQueue.deQueue
 
@@ -195,6 +276,12 @@ package core {
              //something to kill in the ready queue
              tasksToKill foreach(taskToKillId => {
                  sys.tasksLog("Killing task id "+taskToKillId+" with value -1")
+
+                //free ram
+                val framesOwnedByTaskToKill = pageOwners.zipWithIndex.filter(_._1==taskToKillId).map(_._2).toList
+                memLog.info("killing task "+taskToKillId+", frames owned: "+framesOwnedByTaskToKill.mkString(","))
+
+                framesOwnedByTaskToKill.foreach(frameIndex => pageOwners(frameIndex) = -1 )
 
                  val queueWhereTaskIs = queuesWhereTasksAre.get(taskToKillId).get
 
@@ -217,6 +304,7 @@ package core {
 
       //runs the nextp task in the ready queue, returns the task id of the running task
       def runNextTask:Unit = {
+        //println("run next task")
         activeSchedulingQueue = queueToSchedule
         var executedInstruction = true
 
@@ -228,6 +316,7 @@ package core {
             if (activeSchedulingQueue.size == 1 || activeSchedulingQueue.isPreemptive)
               currentTask = activeSchedulingQueue(0)
 
+            //println("current task: "+currentTask)
             //set response time if it's not set
             if (currentTask.tickWhenStartedExecuting <0 )
               currentTask.tickWhenStartedExecuting=ticks.size
@@ -256,7 +345,17 @@ package core {
                 timeOfTaskInCPU +=1
                 activeSchedulingQueue.timeInExecution +=1
 
-                currentTask.execNext()
+                try {
+                  currentTask.execNext()
+                } catch{
+                  case e:exceptions.executionException => {
+                      println(e)
+                      currentTask.executionHasFinished = true
+                  }
+                  case a => {
+                      println(a.toString)
+                  }
+                }
                 
                 if (currentTask.userProgramInterpreter.didFork && queueToSchedule.isPreemptive){
                   //load registers from current task
@@ -271,6 +370,8 @@ package core {
                 if (currentTask.contextSwitchFlag){
                   doContextSwitch("i/o")
                 }
+
+                
               }
             }
           } else{ //end if active scheduling queue is not empty
@@ -279,11 +380,16 @@ package core {
             ticks.put(ticks.size,tickMetadata)
             executedInstruction = false
           }
-
+          //println("update waiting")
           updateAndCheckForWaitingQueue
 
           if (!queueToSchedule.isEmpty || !waitingQueue.isEmpty){
+            //println("mando a run next task")
             runNextTask
+          }else{
+            //println("not running next task")
+            //println("queue to schedule: "+queueToSchedule)
+            //println("queue to schedule: "+waitingQueue)
           }
 
           } /*else{
@@ -326,17 +432,18 @@ package core {
         sys.tasksLog("Kill queue: "+tasksToKill.toString)
       }
 
-      def runProgram(parentTaskId:Int,programToExecute:programs.program,priority:Int,doVerbose:Boolean) = {
+      def runProgram(parentTaskId:Int,programToExecute:programs.program,priority:Int,requiredFrames:Int,doVerbose:Boolean) = {
         tasksCounter += 1
 
-        val newTask = new task(parentTaskId,getNewProcessId,programToExecute,registers,priority,doVerbose)
+        val newTask = new task(parentTaskId,getNewProcessId,programToExecute,registers,priority,requiredFrames,doVerbose)
         runTask(newTask)
       }
 
       def doContextSwitch(cause:String) = {
         tasksLog.info("Context switch, cause: "+cause)
-
+        //println("Context switch, cause: "+cause)
         val taskToLeaveQueue = activeSchedulingQueue.deQueue
+        //println("task to leave: "+taskToLeaveQueue)
         tasksLog.info("Dequeued task, active scheduling queue: "+activeSchedulingQueue.toString)
         taskToLeaveQueue.saveRegisters(registers)
         tasksLog.info("saved task registers")
@@ -359,20 +466,23 @@ package core {
 
         tasksLog.info("queues: "+queues.toString)
         timeOfTaskInCPU = 0
-        currentTask = null
+        //currentTask = null
         //force to fetch next task if there is any
-        runNextTask
+        //runNextTask
       }
 
 
       def endTask(endValue:Int){
         sys.tasksLog("Ending current task with value "+endValue.toString)
-
-          Console.println("ended task "+)
           val endingTask = activeSchedulingQueue.deQueue
+          //free ram
+          val framesOwnedByTask = pageOwners.zipWithIndex.filter(_._1==endingTask.id).map(_._2).toList
+          memLog.info("ending task "+endingTask.id+", frames owned: "+framesOwnedByTask.mkString(","))
+
+          framesOwnedByTask.foreach(frameIndex => pageOwners(frameIndex) = -1 )
+
           sys.tasksLog("Ending task: "+endingTask.toString)
           endingTask.executionHasFinished = true
-          println("executionHasFinished")
           //val parentId = endingTask.parentId
 
           endingTask.setStateTo("Terminated")
@@ -382,6 +492,7 @@ package core {
           programResults.put(endingTask.id,endValue)
           tasksList.update(endingTask.id, endingTask)
 
+
           runNextTask
       }
 
@@ -390,7 +501,9 @@ package core {
         loop{
           receive{
             case newTask:core.task =>{
+               println("act ")
                runTask(newTask)
+               println("termino act")
             }
           }
         }
@@ -399,7 +512,8 @@ package core {
     }
 
     var registers = scala.collection.mutable.Map[String,Int](
-                  "R0" -> 0, "R1" -> 0, "R2" -> 0, "R3" -> 0, "R4" -> 0, "R5" -> 0, "R6" -> 0, "R7" -> 0
+        "R0" -> 0, "R1" -> 0, "R2" -> 0, "R3" -> 0, "R4" -> 0, "R5" -> 0, "R6" -> 0, "R7" -> 0,
+        "R8" -> 0, "R9" -> 0, "R10" -> 0, "R11" -> 0, "R12" -> 0, "R13" -> 0, "R14" -> 0, "R15" -> 0
     )
 
     def echo(message:String){
@@ -417,8 +531,9 @@ package core {
     def isRegister(name:String) = registers.contains(name.toUpperCase)
 
     def forkProcess(taskId:Int, command:List[String],output:outputMethod) = {
-        val newTaskId = shell.exec(taskId,command,output,tasksList.get(taskId).get.verbose)
-        tasksLog.info("taskId "+taskId+" has fork a new child, taskId: "+tasksList.get(newTaskId).get.toString)
+        val programMeta = shell.getProgramFromEntry(command.mkString(" "))
+        val newTaskId = shell.exec(taskId,programMeta,tasksList.get(taskId).get.verbose)
+        tasksLog.info("taskId "+taskId.toString+" has fork a new child, taskId: "+tasksList.get(newTaskId).get.toString)
         newTaskId
     }
 

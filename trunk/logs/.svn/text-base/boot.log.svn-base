@@ -1,8 +1,0 @@
-(1268116152321241000) INF Booting log initialized
-(1268116152432098000) INF Loading configuration file..
-(1268116152527009000) INF Scheduling has startQueue id: 1
-(1268116152527223000) INF Found 3 scheduling queues in configuration file:
-(1268116152528129000) INF id: 1 name: Queue1 type: Priority quantum: 8 preemptive: false queueOnQuantumEnd 2 queueOnIOEnd: 1
-(1268116152537796000) INF id: 2 name: Queue2 type: SJF quantum: 16 preemptive: true queueOnQuantumEnd 3 queueOnIOEnd: 2
-(1268116152538681000) INF id: 3 name: Queue3 type: FCFS quantum: 0 preemptive: true queueOnQuantumEnd 3 queueOnIOEnd: 3
-(1268116152542573000) INF Multilevel-feedback-queue configuration: ArrayBuffer(id: 1 name: Queue1 quantum: 8 Queue: PriorityQueue(), id: 2 name: Queue2 quantum: 16 Queue: PriorityQueue(), id: 3 name: Queue3 quantum: 0 Queue: Queue())

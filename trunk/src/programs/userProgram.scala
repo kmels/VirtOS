@@ -73,5 +73,6 @@ class userProgram(fileName:File, outputObject:core.outputMethod) extends program
              }
   }
 
+
   val burstTime = sys.getBurstTime(this)
 }

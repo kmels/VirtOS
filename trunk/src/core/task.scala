@@ -4,7 +4,7 @@ import java.io.File
 import programs.userProgram
 import exceptions._
 
-class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:scala.collection.mutable.Map[String,Int],priorityOfTask:Int,doVerbose:Boolean) {
+class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:scala.collection.mutable.Map[String,Int],priorityOfTask:Int,pagesNeeded:Int,doVerbose:Boolean) {
     val verbose = doVerbose
     val id = pid
     val parentId = parent    
@@ -18,6 +18,12 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
     var timeInCPU = 0
     var tickWhenStartedExecuting = -1
     var tickWhenCreated = 0
+
+    //logic page -> real page on memory
+    val assignedFrames = sys.getFramesForNewTask(pagesNeeded,pid,parent)
+    var frames:Map[Int,Int] = assignedFrames.map(frameNumber => {
+        (assignedFrames.indexOf(frameNumber),frameNumber)
+    }).toMap
 
     def responseTime:Int = tickWhenStartedExecuting - tickWhenCreated
 
@@ -47,7 +53,7 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
     * Task stuff
     */
     
-    override def toString = "pid: "+id.toString + ", programName: "+name+", priority: "+priority.toInt.toString+", CPU burst: "+burstTime.toInt.toString + ", parent_id: "+parentId.toString +", state_id: "+state.toString +", waitingTimeSinceLastIO: "+waitingTimeSinceLastIO.toString//+ " registers: "+registers.toString
+    override def toString = "pid: "+id.toString + ", programName: "+name+", priority: "+priority.toInt.toString+", requested frames: "+pagesNeeded.toInt+", CPU burst: "+burstTime.toInt.toString + ", parent_id: "+parentId.toString +", state_id: "+state.toString +", waitingTimeSinceLastIO: "+waitingTimeSinceLastIO.toString//+ " registers: "+registers.toString
     
     def setStateTo(value:Int){
       sys.updateTaskInTasksList(this.id,this)
@@ -64,6 +70,32 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
         case unknownStateId => throw new unknownStateIdException(unknownStateId)
       }
       sys.tasksLog.info("Changed task: "+this.toString + " to state \""+state+"\"")
+    }
+
+    def updateMemory(absoluteMemoryPosition:Int,value:Int){
+      val logicPageNumber:Int = absoluteMemoryPosition / sys.pageSize
+      //println("frame size: "+sys.pageSize.toString)
+      val indexOfFrameToUpdate:Int = absoluteMemoryPosition % sys.pageSize
+      val pageInMemory = frames.get(logicPageNumber)
+      pageInMemory match{
+        case Some(frame) => {
+            //println("va a updear pagina "+frame.toString+" en la pos "+indexOfFrameToUpdate.toString+" con "+value.toString)
+            sys.memory(frame)(indexOfFrameToUpdate) = value
+        }
+        case _ => throw new executionException("invalid address")
+      }
+    }
+
+    def readMemory(absoluteMemoryPosition:Int):Int = {
+        val logicPageNumber:Int = absoluteMemoryPosition / sys.pageSize
+        val indexOfPageToUpdate:Int = absoluteMemoryPosition % sys.pageSize
+        val pageInMemory = frames.get(logicPageNumber)
+        pageInMemory match{
+        case Some(page) => {
+            sys.memory(page)(indexOfPageToUpdate)
+        }
+        case _ => throw new executionException("invalid address")
+      }
     }
     
     def execAndFinish(aSystemProgram:programs.system_program) = {
@@ -328,8 +360,18 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
                 printIfVerbose("Updated register "+register+" to value "+childId.toString)
               }
 
+              case List("THREAD",command,register1) => {
+                  println("encontro thread, con command: "+command)
+                  didFork = true
+
+                  printIfVerbose("found Instruction:\"THREAD "+command+" "+register1+"\"")
+                  val childId = sys.forkProcess(id,command.split(' ').toList,output)
+                  printIfVerbose("fork was successful, child id given:"+childId.toString)
+                  sys.updateRegisterValue(register1,childId)
+                  printIfVerbose("Updated register "+register1+" to value "+childId.toString)
+              }
+
               case List("GETSTATE",taskIdValue,register2,register1) => {
-                println("pidio getstate")
                 val taskId = sys.getRealValue(taskIdValue)
                 val stateValue = sys.getStateValue(taskId)
                 val endValue = sys.getEndValue(taskId)
@@ -353,6 +395,18 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
                 sys.updateRegisterValue(register3,randomNumber)
               }
 
+              case List("READMEM",register1,registerToUpdate) =>{
+                  val memoryPos = sys.getRealValue(register1)
+                  sys.updateRegisterValue(registerToUpdate,readMemory(memoryPos))
+              }
+
+              case List("WRITEMEM",register1,register2) =>{
+                  val memoryPos = sys.getRealValue(register1)
+                  val valueToAssign = sys.getRealValue(register2)
+                  //println("va a escribir en la pos "+memoryPos+" el valor "+ valueToAssign)
+                  updateMemory(memoryPos,valueToAssign)
+              }
+
               case List(_*) => throw new executionException("could not understand command")
             } //end del match
 
@@ -374,7 +428,7 @@ class task(parent:Int, pid:Int,programToExecute:programs.program,registerValues:
               
             
           } catch {
-            case unkownException : exceptions.executionException  => throw new executionException("Task: "+name+"Execution error at line "+lineNumber.toString+": "+unkownException.toString)
+            case unkownException : exceptions.executionException  => throw new executionException("Task: "+name+" - Execution error at line "+lineNumber.toString+": "+unkownException.toString)
             case knownException => throw new executionException("Execution error at line "+lineNumber.toString+": "+knownException.toString)
           }
       } //end de execute instruction
