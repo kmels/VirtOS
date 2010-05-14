@@ -1,0 +1,27 @@
+;###############################################
+; Factorial
+;###############################################
+
+; r0 contiene el parámetro enviado por el usuario para saber de cuánto quiere
+; el factorial
+
+;r1 va almacenando el resultado
+
+Echo "El factorial de "
+Echo r0
+Echo " es: "
+
+set r1 1
+set r2 1
+set r3 1
+
+'salto'
+mul r1 r1 r2
+add r2 r2 r3
+sub r0 r0 r3
+jmp r0 salto
+
+Echo r1
+Echo "\n"
+end 1
+

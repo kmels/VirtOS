@@ -1,6 +1,0 @@
-<sys>
-  <memory ram="8saf" swap="8" page="16"/>
-	<scheduling startQueue="1">
-		<queue id="1" name="Queue1" type="Priority" quantum="4" preemptive="1" queueOnQuantumEnd="1" queueOnIOEnd="1" />
-	</scheduling>
-</sys>

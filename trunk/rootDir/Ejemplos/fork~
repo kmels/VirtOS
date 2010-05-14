@@ -1,0 +1,28 @@
+; fork
+; Crea dos procesos que leen archivos. Imprime los dos archivos, con las lineas intercaladas
+; 11/02/2010
+
+; Crear procesos hijos
+Fork "readFile 0" r1 
+Fork "readFile 1" r2
+
+'loop'
+
+; Ceder CPU a procesos hijos
+sleep
+
+; Obtener resultados de procesos hijos
+GetState r1 r3 r4
+GetState r2 r5 r6
+
+; Procesos hijo terminados tienen resultado = 1
+; Iteramos hasta que los procesos hijos terminen
+Set r0 2
+Sub r0 r0 r4
+Sub r0 r0 r6
+
+jmp r0 loop
+
+Echo "termino el fork\n"
+
+End 1

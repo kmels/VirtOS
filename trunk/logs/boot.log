@@ -1,0 +1,9 @@
+(1273813323755980000) INF Configuration loaded: 
+	Memory: 
+		Ram size: 8
+		Swap size: 8
+		Frame size: 16
+	Scheduling: 
+		Start queue: 1
+		Number of queues Loaded: 1
+		Queues: id: 1 name: Queue1 quantum: 4 Queue: PriorityQueue()

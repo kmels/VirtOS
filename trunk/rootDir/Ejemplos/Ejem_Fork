@@ -1,0 +1,20 @@
+;###################################
+; EJemplo del uso del fork
+;###################################
+
+set r0 0
+set r1 1
+fork "Fibonacci 2" r0
+Sleep
+getState r0 r2 r1
+Echo "proceso que se quiere: "
+Echo r0
+Echo "\n"
+Echo "estado del proceso: "
+Echo r2
+Echo "\n"
+Echo "retorno del proceso: "
+Echo r1
+Echo "\n"
+
+end 1

@@ -1,0 +1,25 @@
+(1273813323760555000) INF Mem log initialized
+(1273813326988246000) INF task 1 is asking for 2 frames
+(1273813326989536000) INF 8 free frames were found: 0,1,2,3,4,5,6,7
+(1273813326989593000) INF assigning free frames
+(1273813326990160000) INF assigned frames: 0,1
+(1273813326990650000) INF frame owners table updated
+(1273813326990732000) INF memory owners: 1,1,-1,-1,-1,-1,-1,-1
+(1273813326990807000) INF swap owners: -1,-1,-1,-1,-1,-1,-1,-1
+(1273813327283133000) INF ending task 1, frames owned: 0,1
+(1273813342158876000) INF task 2 is asking for 2 frames
+(1273813342159064000) INF 8 free frames were found: 0,1,2,3,4,5,6,7
+(1273813342159086000) INF assigning free frames
+(1273813342159144000) INF assigned frames: 0,1
+(1273813342159168000) INF frame owners table updated
+(1273813342159204000) INF memory owners: 2,2,-1,-1,-1,-1,-1,-1
+(1273813342159240000) INF swap owners: -1,-1,-1,-1,-1,-1,-1,-1
+(1273813342424192000) INF ending task 2, frames owned: 0,1
+(1273813348570601000) INF task 3 is asking for 2 frames
+(1273813348570772000) INF 8 free frames were found: 0,1,2,3,4,5,6,7
+(1273813348570794000) INF assigning free frames
+(1273813348570845000) INF assigned frames: 0,1
+(1273813348570865000) INF frame owners table updated
+(1273813348570908000) INF memory owners: 3,3,-1,-1,-1,-1,-1,-1
+(1273813348570936000) INF swap owners: -1,-1,-1,-1,-1,-1,-1,-1
+(1273813348590949000) INF ending task 3, frames owned: 0,1

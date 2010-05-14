@@ -1,0 +1,133 @@
+Exploit an Infrastructure “Built to
+Build”
+
+Google has spent billions of dollars creating
+its internet-based operating platform and developing
+proprietary technology. The investment
+in infrastructure allows the company to
+guarantee specified service levels and subsecond
+response times. It also allows Google
+to rapidly develop and roll out new services
+of its own or its partners’ devising. The proprietary
+technology gives the company unprecedented
+control over the design and evolution
+of its infrastructure (and emergent strategy).
+The main attributes of Google’s infrastructure
+are these:
+
+Scalability.
+
+While the internet is of course
+available to every company, Google has made
+major investments to get more out of it and to
+construct a proprietary platform that supports
+new and growing online services. According
+to unofficial but widely reported statistics,
+Google owns a network infrastructure consisting
+of approximately one million computers;
+these run an operating system that allows new
+computer clusters to plug in and be globally
+recognized and instantly available for use.
+The operating software that performs this
+magic is a customized version of open source
+Linux (which itself is built to make it easy
+for third parties to add features of competitive
+value).
+Another aspect of the infrastructure is that
+the internet platform is built to scale. For
+example, when Google needs more data
+centers, the proprietary operating system
+makes them easy to add. And the company
+can move data around the world seamlessly
+to meet changing user demand. Managing
+the petabytes of data Google accumulates
+requires special database-management tools.
+Because existing commercial systems couldn’t
+efficiently support such large volumes of
+data, Google developed a proprietary database
+called Bigtable, which is tuned to work with
+Google’s operating system to process growing
+volumes of data quickly and efficiently.
+
+An accelerated product-development life
+cycle. 
+
+Google’s infrastructure is well suited to
+executing an entire product-development life
+cycle rapidly and efficiently. Google engineers
+prototype new applications on the platform;
+if any of these begin to get users’ attention,
+developers can launch beta versions to see
+whether the company’s vast captive customer
+base responds enthusiastically. If one of the
+applications becomes a hit, Google’s enormous
+“cloud” of computing capability can
+make room for it. In the process of moving
+products from the alpha to the beta phase,
+Google simultaneously tests and markets
+them to the user community. In fact, testing
+and marketing are virtually indistinguishable
+from one another. This creates a unique
+relationship with consumers, who become
+an essential part of the development team
+as new products take shape and grow.
+Google does more than just alpha and beta
+test applications—it can host them on its
+infrastructure. Google’s customers then transition
+seamlessly from testing to using products
+as they would any other commercial offering.
+
+Support for third-party development and
+mashups. 
+
+Google created its proprietary infrastructure
+to be a more efficient and reliable
+alternative to the internet, ensuring a better
+user experience and higher quality of service.
+These purposeful investments in hardware,
+operating systems, and database management
+enable the company to exert control from end
+to end and to enhance such services as Gmail,
+Maps, AdWords, and the advertising placement
+system AdSense. When Google creates
+an application, it pays attention to the way it
+will fit into the infrastructure. Google Maps
+was therefore architected as a service so that
+either the company’s own engineers or those
+of third parties could use it as a module to
+enrich additional services.
+Indeed, Google’s flexible infrastructure acts
+as an innovation hub where third parties can
+share access and create new applications that
+incorporate elements of Google functionality.
+These outsiders can easily test and launch applications
+and have them hosted in the Google
+world, where there is an enormous target
+audience—132 million customers globally—
+and a practically unlimited capacity for customer
+interactions. This benefits both parties:
+Google gets its product widely adopted, and
+its partners can devote their energies to developing
+product functionality important to
+their customers. For instance, a real estate
+company like Zillow.com can focus on getting
+high-quality data on properties that have
+been bought and sold, and leave the maps
+and display elements to Google or Microsoft.
+In exactly this way, third parties browsing
+Google’s infrastructure began creating what
+are known as mashups—IT applications
+that combine data and program functionality
+from more than one external source into
+an integrated customer experience. For example,
+Housingmaps.com combines data from
+Craigslist with Google Maps to create an
+application that allows users to see apartments
+for rent or houses for sale plotted on a
+map of the local area. This notion of allowing
+useful services to be mixed and matched with
+relative ease across organizational boundaries
+has interesting implications for the competitive
+environment and for organizational efficiency,
+engendering a “just try it” class of lean
+innovation. (Technically, it is made possible

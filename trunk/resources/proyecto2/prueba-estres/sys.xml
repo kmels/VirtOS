@@ -1,7 +1,0 @@
-<sys>
-	<scheduling startQueue="1">
-		<queue id="1" name="Queue1" type="Priority" quantum="8" preemptive="0" queueOnQuantumEnd="2" queueOnIOEnd="1" />
-		<queue id="2" name="Queue2" type="SJF" quantum="16" preemptive="1" queueOnQuantumEnd="3" queueOnIOEnd="2" />
-		<queue id="3" name="Queue3" type="FCFS" quantum="0" preemptive="1" queueOnQuantumEnd="3" queueOnIOEnd="3" />
-	</scheduling>
-</sys>

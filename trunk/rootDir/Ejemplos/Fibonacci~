@@ -1,0 +1,53 @@
+;###############################################
+; serie de fibonacci
+;###############################################
+;R0 es el parametro (contador)
+
+; reiniciar todos los registros menos el 0 (ya que es el contador)
+Set r1 0
+Set r2 0
+Set r3 0
+Set r4 0
+Set r5 0
+Set r6 0
+Set r7 0
+
+;valor sumando 1
+Set R1 0
+Set R7 1
+;valor sumando 2
+Set R2 1
+;valor a restarle al contador
+Set R4 1
+'Sumar'
+Echo "Fibonacci de "
+;establecer en R5, el valor de fibonacci que se esta haciendo
+SET R5 10
+SUB R5 R5 R0
+Echo R6
+Echo " es: "
+Echo R1
+Echo "\n"
+Add R3 R1 R2
+Set R1 R2
+Set R2 R3
+Add R6 R6 R7
+;Restarle uno al contador
+Sub R0 R0 R4
+JMP R0 Sumar
+END 0
+
+
+
+;----- OUTPUT
+;FIBONACCI DE 0 ES:  0
+;FIBONACCI DE 1 ES:  1
+;FIBONACCI DE 2 ES:  1
+;FIBONACCI DE 3 ES:  2
+;FIBONACCI DE 4 ES:  3
+;FIBONACCI DE 5 ES:  5
+;FIBONACCI DE 6 ES:  8
+;FIBONACCI DE 7 ES:  13
+;FIBONACCI DE 8 ES:  21
+;FIBONACCI DE 9 ES:  34
+

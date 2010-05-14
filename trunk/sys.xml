@@ -1,6 +1,10 @@
 <sys>
+  <directories>
+    <root path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/rootDir/"/>
+    <logs path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/logs/"/>
+  </directories>
   <memory ram="8" swap="8" page="16"/>
-	<scheduling startQueue="1">
-		<queue id="1" name="Queue1" type="Priority" quantum="4" preemptive="1" queueOnQuantumEnd="1" queueOnIOEnd="1" />
-	</scheduling>
+  <scheduling startQueue="1">
+    <queue id="1" name="Queue1" type="Priority" quantum="4" preemptive="1" queueOnQuantumEnd="1" queueOnIOEnd="1" />
+  </scheduling>
 </sys>

@@ -1,6 +1,0 @@
-set r1 2
-set r2 4
-echo "resultado: "
-echo r2
-
-end
