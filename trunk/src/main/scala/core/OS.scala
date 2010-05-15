@@ -2,7 +2,7 @@ package core
 
 import programs.program
 import scala.collection.immutable.{ListSet}
-import scala.collection.mutable.{Queue,ArrayBuffer,Map,Buffer}
+import scala.collection.mutable.{Queue,ArrayBuffer,Buffer}
 import exceptions._
 import util.{schedulingQueue,tickMeta,Log}
 
@@ -16,6 +16,8 @@ class OperatingSystem(pathToConfigurationFile:String){
   val configuration = new Configuration(pathToConfigurationFile)
   val pathToRoot = configuration.pathToRootDirectory
   val pathToLogs = configuration.pathToLogDirectory
+
+  var isON = true
 
   //create boot log
   val bootLog = new util.Log(pathToLogs+"boot.log")
@@ -45,7 +47,7 @@ class OperatingSystem(pathToConfigurationFile:String){
    * Create tasks metadata
    */
   val io = new IOInterface(this)
-  var tasks = Map[Int,Task]()
+  var tasks = scala.collection.mutable.Map[Int,Task]()
   val programResults = scala.collection.mutable.Map[Int,Int]()
   var semaphores = scala.collection.mutable.Map[Int,Int]() //semaphore id -> value
   
@@ -58,22 +60,27 @@ class OperatingSystem(pathToConfigurationFile:String){
   shell.start
   
   /*
+   * Turns off this OS.
+   */ 
+  def shutDown:Unit = {
+    this.isON = false
+  }
 
 /*
  * Returns the state for a given task id, returns -1 if the task does not exit (or has never existed)
- */
+ 
  def getTaskState(taskId:Int):Int =
  if (tasksList.contains(taskId))
  tasksList(taskId).state
  else
- -1
- */
+ -1*/
+ 
   def getTask(taskId:Int):Task =
     if (tasks.contains(taskId))
       tasks(taskId)
     else
       throw invalidTaskIdentifier(taskId, ", unable to find: has never existed")
-  /*
+ /* 
    def echo(message:String){
    shell.print(message)
    }

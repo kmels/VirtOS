@@ -12,7 +12,7 @@ class kill(os:OperatingSystem,taskId:Int,outputObject:core.outputMethod) extends
           try
              os.scheduler.killTask(taskId)
           catch {
-            case taskDoesntExistException:invalidTaskIdentifier => throw invalidTaskIdentifier(taskId," when attempting to kill it, it does not exist or has never existed.")
+            case taskDoesntExistException:invalidTaskIdentifier => println(taskDoesntExistException.toString)
           }
         }
 }

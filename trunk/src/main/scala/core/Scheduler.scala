@@ -5,7 +5,8 @@ import scala.actors.Actor._
 import util.{schedulingQueue,tickMeta,Log}
 import scala.collection.immutable.{ListSet}
 import scala.collection.mutable.{ArrayBuffer,Queue}
-import exceptions.invalidTaskIdentifier
+import exceptions.{invalidTaskIdentifier,frameTooLargeException}
+import programs.userProgram
 
 class Scheduler(os:OperatingSystem) extends Actor{
   val tasksLog = new Log(os.pathToLogs+"ps.log")
@@ -149,11 +150,9 @@ class Scheduler(os:OperatingSystem) extends Actor{
   } //end check for tasks to kill
 
   def runNextTask:Unit = {
-    //println("run next task")
     activeSchedulingQueue = queueToSchedule
     var executedInstruction = true
 
-    //Console.println("queueToSchedule: "+queueToSchedule.toString)
     if (!activeSchedulingQueue.isEmpty || !waitingQueue.isEmpty){
       if (!activeSchedulingQueue.isEmpty){
         tasksLog.info("Executing tasks from queue: "+activeSchedulingQueue.getName)
@@ -161,7 +160,6 @@ class Scheduler(os:OperatingSystem) extends Actor{
         if (activeSchedulingQueue.size == 1 || activeSchedulingQueue.isPreemptive)
           currentTask = activeSchedulingQueue(0)
 
-        //println("current task: "+currentTask)
         //set response time if it's not set
         if (currentTask.tickWhenStartedExecuting <0 )
           currentTask.tickWhenStartedExecuting=ticks.size
@@ -172,24 +170,26 @@ class Scheduler(os:OperatingSystem) extends Actor{
         }
 
         currentTask.setStateTo("Running")
-
-        //Console.println("ejecutando "+currentTask.name)
+        
         while (!activeSchedulingQueue.isEmpty && !currentTask.executionHasFinished) {
+//          println("while (!activeSchedulingQueue.isEmpty && !currentTask.executionHasFinished")
           //check for tasks to kill
           checkForTasksToKill
 
           //check for quantum end
           if (activeSchedulingQueue.hasQuantum && (activeSchedulingQueue.getQuantum==timeOfTaskInCPU)){
+//            println("timeOfTaskINCPU: "+timeOfTaskInCPU)
             //quantum has end, context switch because of quantum
             doContextSwitch("quantum_end")
           }else{
+  //          println("executing normally")
             //execute normally
             val tickMetadata = new tickMeta(currentTask.userProgramInterpreter.getNextInstructionMeta(),activeSchedulingQueue,queues,waitingQueue,currentTask)
             ticks.put(ticks.size,tickMetadata)
+//            println("tickMeta: "+tickMetadata.toString)
             currentTask.timeInCPU +=1
             timeOfTaskInCPU +=1
             activeSchedulingQueue.timeInExecution +=1
-
             try {
               currentTask.execNext()
             } catch{
@@ -215,8 +215,6 @@ class Scheduler(os:OperatingSystem) extends Actor{
             if (currentTask.contextSwitchFlag){
               doContextSwitch("i/o")
             }
-
-            
           }
         }
       } else{ //end if active scheduling queue is not empty
@@ -232,9 +230,7 @@ class Scheduler(os:OperatingSystem) extends Actor{
         //println("mando a run next task")
         runNextTask
       }else{
-        //println("not running next task")
-        //println("queue to schedule: "+queueToSchedule)
-        //println("queue to schedule: "+waitingQueue)
+        //not running anything
       }
 
     } /*else{
@@ -243,7 +239,7 @@ class Scheduler(os:OperatingSystem) extends Actor{
   } //end run next task
 
   def runTask(newTask:Task) = {
-    println("task a correr: "+newTask)
+    //println("task a correr: "+newTask)
     tasksLog.info("runTask: "+newTask.toString)
     newTask.tickWhenCreated = ticks.size
     os.tasks.put(newTask.id,newTask)
@@ -265,9 +261,14 @@ class Scheduler(os:OperatingSystem) extends Actor{
     newTask.id
   }
 
-  def runProgram(parentTaskId:Int,programToExecute:programs.program,priority:Int,requiredFrames:Int,doVerbose:Boolean) = {
-    val newTask = new Task(os,parentTaskId,getNewProcessId,programToExecute,os.registers,priority,requiredFrames,doVerbose)
-    runTask(newTask)
+  def runProgram(parentTaskId:Int,programToExecute:userProgram,priority:Int,requiredFrames:Int,doVerbose:Boolean):Int = {
+    try {
+      val newTask = new Task(os,parentTaskId,getNewProcessId,programToExecute,os.registers,priority,requiredFrames,doVerbose)
+      tasksLog.info("Created task id: "+newTask.id+", priority: "+priority+", frames: "+requiredFrames)
+      runTask(newTask)
+    } catch{
+      case invalidFrameSize:frameTooLargeException => os.shell.println(invalidFrameSize.toString); -1
+    }
   }
 
   def doContextSwitch(cause:String) = {
@@ -288,8 +289,9 @@ class Scheduler(os:OperatingSystem) extends Actor{
         tasksLog.info("Added task to waiting queue: "+taskToLeaveQueue.toString)
       }
       case "quantum_end" => {
+//        println("tick: "+ticks.size+" haciendo cntxtswtch")
         val queueOnQuantumEnd:schedulingQueue = queues.find(_.getId == activeSchedulingQueue.getQueueOnQuantumEndId).get
-        tasksLog.info("Enqueued task: "+taskToLeaveQueue.toString+" in queue: "+queueOnQuantumEnd.toString)
+        tasksLog.info("Enqueued task: "+taskToLeaveQueue.toString+" in "+queueOnQuantumEnd.getName)
         queueOnQuantumEnd.enQueue(taskToLeaveQueue)
         queuesWhereTasksAre.put(taskToLeaveQueue.id,queueOnQuantumEnd)
       }
@@ -329,9 +331,7 @@ class Scheduler(os:OperatingSystem) extends Actor{
       loop{
         receive{
           case newTask:Task=>{
-            println("act ")
             runTask(newTask)
-            println("termino act")
           }
         }
       }
@@ -355,6 +355,9 @@ class Scheduler(os:OperatingSystem) extends Actor{
 
   def getFramesForNewTask(howMany:Int,taskId:Int,parentId:Int):List[Int] = {
     os.memLog.info("task "+taskId.toString+" is asking for "+howMany.toString+" frames")
+
+    if (os.pageSize<howMany)
+      throw new frameTooLargeException(taskId,howMany,os.pageSize)
 
     val assignedFrames:List[Int] =
       if (parentId!=0){

@@ -53,7 +53,7 @@ class Task(os:OperatingSystem,parent:Int, pid:Int,programToExecute:programs.prog
    * Task stuff
    */
   
-  override def toString = "pid: "+id.toString + ", programName: "+name+", priority: "+priority.toInt.toString+", requested frames: "+pagesNeeded.toInt+", CPU burst: "+burstTime.toInt.toString + ", parent_id: "+parentId.toString +", state_id: "+state.toString +", waitingTimeSinceLastIO: "+waitingTimeSinceLastIO.toString//+ " registers: "+registers.toString
+  override def toString = "pid: "+id.toString + " ("+name+")"//+", priority: "+priority.toInt.toString+", requested frames: "+pagesNeeded.toInt+", CPU burst: "+burstTime.toInt.toString + ", parent_id: "+parentId.toString +", state_id: "+state.toString +", waitingTimeSinceLastIO: "+waitingTimeSinceLastIO.toString//+ " registers: "+registers.toString
   
   def setStateTo(value:Int){
     os.updateTaskInTasksList(this.id,this)

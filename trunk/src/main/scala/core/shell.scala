@@ -21,23 +21,26 @@ class Shell(os:OperatingSystem) {
                     """);
 
     //get the available programs
-    while(true){
+    while(os.isON){
       //ask for users input
       val input:String = readLine("ksh-1.0$> ")
       if (input.length!=0){
-        try{
-          //taskMeta: program, priority,memory and output object
-          val possibleTaskMeta:Option[(userProgram,Int,Int,outputMethod)] = getTaskMeta(input)
-          val parentId = 0 //cause this is the shell
-          println("possible Task meta: "+possibleTaskMeta)
-          possibleTaskMeta match {
-            case Some(taskMeta) => exec(parentId,taskMeta,false)
-            case _ => {} // do nothing, system program was executed
-          }
-        } catch{
-          case commandNotFound:unknownCommandException => println(commandNotFound.toString)
-          case e => println(e.toString+"\n"+e.getStackTraceString)
+        if (input=="exit"){
+          println("Shutting down..")
+          os.shutDown
         }
+        else 
+          try{
+            //taskMeta: program, priority,memory and output object
+            val possibleTaskMeta:Option[(userProgram,Int,Int,outputMethod)] = getTaskMeta(input)
+            possibleTaskMeta match {
+              case Some(taskMeta) => exec(0,taskMeta,false) //0 as parent
+              case _ => {} // do nothing, system program was executed
+            }
+          } catch{
+            case commandNotFound:unknownCommandException => println(commandNotFound.toString)
+            case e => println(e.toString+"\n"+e.getStackTraceString)
+          }
       }
     }
   }
@@ -50,18 +53,12 @@ class Shell(os:OperatingSystem) {
   def exec(parentTaskId:Int,programMetaToExecute:(userProgram,Int,Int,outputMethod),doVerbose:Boolean):Int = {
     try {
       val programToExecute:userProgram = programMetaToExecute._1
-      println ("executing.. "+programToExecute.toString)
       val priority:Int = programMetaToExecute._2
       val requiredFrames:Int = programMetaToExecute._3
       val outputObject:outputMethod = programMetaToExecute._4
       val burstTime = programToExecute.burstTime
       
       //If parentsId is not 0 i.e. it's a parent task forking or threading, it inherits the tasks output mechanism
-      
-
-      //get new task
-      //parent,this.id,userprogram,registers,priority,frames,doverbose
-
       if ((!outputObject.outputIsAsynchronous) || (parentTaskId!=0))
         //run in synchronous mode
         os.scheduler.runProgram(parentTaskId,programToExecute,priority,requiredFrames,doVerbose)
@@ -184,32 +181,32 @@ class Shell(os:OperatingSystem) {
   def executeSystemProgram(programName:String,parameters:List[String],output:outputMethod):Unit = {
     //instance the program
     val systemProgram:system_program = programName match{
-          case "ls" => new ls(os,currentDir,output)
-          case "ps" => new ps(os,output)
-          case "kill" => {
-            if (parameters != 0){
-              val taskIdToKill = parameters(0).toInt
-              new kill(os,taskIdToKill,output)
-            } else
-              throw new exceptions.typeMismatchException("Parameters value must be int, found: "+parameters(0))
-          }
-          case "debug" => {
-            if (parameters.size > 0){
-              new debug(os,parameters,output)
-            }else
-              throw new exceptions.typeMismatchException("Parameters missing for debug")
-          }
-          case "statsgen" => {
-            if (output.outputIsAsynchronous)
-              new statsgen(os,output)
-            else
-              throw new exceptions.typeMismatchException("Parameters missing for statsgen.")
-          }
-          case "top" => new top(os,output)
-        }
-        val max_params = systemProgram.number_of_max_params
-        //execute it 
-        systemProgram.exec
+      case "ls" => new ls(os,currentDir,output)
+      case "ps" => new ps(os,output)
+      case "kill" => {
+        if (parameters != 0){
+          val taskIdToKill = parameters(0).toInt
+          new kill(os,taskIdToKill,output)
+        } else
+          throw new exceptions.typeMismatchException("Parameters value must be int, found: "+parameters(0))
+      }
+      case "debug" => {
+        if (parameters.size > 0){
+          new debug(os,parameters,output)
+        }else
+          throw new exceptions.typeMismatchException("Parameters missing for debug")
+      }
+      case "statsgen" => {
+        if (output.outputIsAsynchronous)
+          new statsgen(os,output)
+        else
+          throw new exceptions.typeMismatchException("Parameters missing for statsgen.")
+      }
+      case "top" => new top(os,output)
+    }
+    val max_params = systemProgram.number_of_max_params
+    //execute it 
+    systemProgram.exec
   }
   def print(string:String) = Console.print(string)
 

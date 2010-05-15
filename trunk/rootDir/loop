@@ -1,8 +1,5 @@
-; Usar para ocupar espacio en memoria 
-; y comprobar que se asigne memoria correctmente
-
-'loop'
 set r0 1
+'loop'
 jmp r0 loop
 
 end 1
