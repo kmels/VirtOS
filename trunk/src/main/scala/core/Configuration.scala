@@ -6,7 +6,12 @@ import util.schedulingQueue
 class Configuration(pathToFile:String){
   val xmlConfiguration:Elem = XML.load(new java.io.FileInputStream(new java.io.File(pathToFile)))
   /**
-   * Directories
+   * File system
+   */
+  val fileSystemFile:String = (xmlConfiguration \\ "fs" \ "@path").toString
+    
+  /**
+   * Directories 
    */
   val directoriesXMLElement:NodeSeq = xmlConfiguration \\ "directories"
   val pathToRootDirectory:String = (directoriesXMLElement \\ "root" \ "@path").toString

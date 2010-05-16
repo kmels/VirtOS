@@ -14,6 +14,9 @@ class OperatingSystem(pathToConfigurationFile:String){
    * Load sys.xml file
    */
   val configuration = new Configuration(pathToConfigurationFile)
+  val pathToFileSystemFile:String = configuration.fileSystemFile
+  val fs = new FileSystem(pathToFileSystemFile)
+  
   val pathToRoot = configuration.pathToRootDirectory
   val pathToLogs = configuration.pathToLogDirectory
 
@@ -56,8 +59,8 @@ class OperatingSystem(pathToConfigurationFile:String){
    */
   val shell = new Shell(this)
   val scheduler = new Scheduler(this)
-  scheduler.start
-  shell.start
+  //scheduler.start
+  //shell.start
   
   /*
    * Turns off this OS.

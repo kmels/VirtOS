@@ -1,17 +1,4 @@
-(1273903802808792000) INF Tasks log initialized
-(1273903802808868000) INF Loading configuration
-(1273903802808985000) INF Loaded Queue configuration: id: 1 name: Queue1 quantum: 4 Queue: PriorityQueue()
-(1273903802809051000) INF Loaded startQueue=1
-(1273903867787582000) INF Changed task: pid: 1 (loop) to state "New"
-(1273903867789646000) INF runTask: pid: 1 (loop)
-(1273903867795109000) INF Changed task: pid: 1 (loop) to state "Ready"
-(1273903867795830000) INF Adding pid: 1 (loop) to queue: Queue1
-(1273903867795955000) INF Added task to queue: Queue1
-(1273903867796429000) INF Executing tasks from queue: Queue1
-(1273903867797093000) INF Changed task: pid: 1 (loop) to state "Running"
-(1273903869806445000) INF Attempting to kill task id: 1
-(1273903869806824000) INF Added : pid: 1 (loop) to kill queue
-(1273903869808751000) INF Kill queue: Set(1)
-(1273903872967111000) INF Attempting to kill task id: 1
-(1273903872967229000) INF Added : pid: 1 (loop) to kill queue
-(1273903872967290000) INF Kill queue: Set(1)
+(1273970696736524000) INF Tasks log initialized
+(1273970696736584000) INF Loading configuration
+(1273970696736664000) INF Loaded Queue configuration: id: 1 name: Queue1 quantum: 4 Queue: PriorityQueue()
+(1273970696736698000) INF Loaded startQueue=1

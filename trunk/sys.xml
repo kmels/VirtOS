@@ -1,4 +1,5 @@
 <sys>
+  <fs path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/fs"/>
   <directories>
     <root path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/rootDir/"/>
     <logs path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/logs/"/>
