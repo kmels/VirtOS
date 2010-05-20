@@ -1,0 +1,75 @@
+package core
+
+import util.FS
+import scala.collection.mutable.ArrayBuffer
+
+case class FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:Long,modificationDate:Long,fileOrDir:Char,siblingId:Int){
+  //empty buffer
+  val buffer:Array[Byte] = ArrayBuffer.fill(256)(whitespace).toArray //an empty FCB
+  
+  def applyPatch(from:Int,src:Array[Byte],replaced:Int) {
+    for (i<-from to replaced)
+      buffer(i) = src(i-from)
+  }
+
+  assertEquals("FileControlBlock",buffer.size,256)
+  //set id
+  assert(id<84 && id>=0)
+  buffer(0) = byteFromDigit(id/10)
+  buffer(1) = byteFromDigit(id%10)
+  
+  //set name
+  assert(name.endsWith("."))
+  applyPatch(2,stringToByteArray(extendToRightString(name,32)),32)
+
+  //set size
+  applyPatch(2+32,stringToByteArray(extendToRightString(size.toString,7)),7)
+
+  //set first block, -1 means an empty dir
+  if (firstBlock>0)
+    applyPatch(2+32+7,stringToByteArray(extendToRightString(firstBlock.toString,4)),4)
+  else
+    applyPatch(2+32+7,emptySequence(4),4)
+  
+  //set creation and modification date
+  applyPatch(2+32+7+4,stringToByteArray(extendToRightString(creationDate.toString,32)),32)
+  applyPatch(2+32+7+4+32,stringToByteArray(extendToRightString(modificationDate.toString,32)),32)
+
+  assert(fileOrDir=='a' || fileOrDir=='c')
+
+  //file or directory
+  def isFile:Boolean = fileOrDir == 'a'
+  def isDirectory:Boolean = fileOrDir == 'c'
+  buffer(2+32+7+4+32+32) = fileOrDir.toByte
+  
+  //set sibling id
+  applyPatch(2+32+7+4+32+32+1,stringToByteArray(extendToRightString(siblingId.toString,2)),2)
+
+  assertEquals("FileControlBlock",buffer.size,256)
+}
+
+ def fileControlBlockFromBuffer(buffer:Array[Byte]):FileControlBlock = {
+    assertEquals("fileControlBlockFromBuffer",buffer.size,256)
+    println("buffer recibido: "+buffer.mkString(","))
+    
+    val id:Int = byteToString(buffer(0)).toInt*10+byteToString(buffer(1)).toInt
+    val name:String = byteArrayToString(buffer.slice(2,2+32).toArray)
+    assertEquals("fileControlBlockFromBuffer: name.size",name.size,32)
+    val sizeB = buffer.slice(2+32,2+32+7)
+    sizeB.foreach(println(_))
+    println(sizeB.toString)
+    println(sizeB.size)
+    assertEquals("asdf",sizeB.size,7)
+    println(byteArrayToString(buffer.slice(2+32,2+32+7)))
+    val size:Int = byteArrayToString(buffer.slice(2+32,2+32+7)).toInt
+    println(size)
+    val firstBlock:Int = byteArrayToString(buffer.slice(2+32+7,2+32+7+4)).toInt
+    val creationDate:Long = byteArrayToString(buffer.slice(2+32+7+4,2+32+7+4+32)).toLong
+    val modificationDate:Long = byteArrayToString(buffer.slice(2+32+7+4+32,2+32+7+4+32+32)).toLong
+    val fileOrDir:Char = buffer(2+32+7+4+32+32).toChar
+    val siblingId:Int = byteArrayToString(buffer.slice(2+32+7+4+32+32+1,2+32+7+4+32+32+1+2)).toInt
+    println("antes")
+    new FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:Long,modificationDate:Long,fileOrDir:Char,siblingId:Int)
+ }
+
+val emptyFCB =  new FileControlBlock(0,".",0,0,0,0,'a',0)
