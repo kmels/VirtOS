@@ -1,7 +1,7 @@
 package util
 
 import java.net._
-import java.io.{BufferedReader,BufferedWriter,InputStreamReader}
+import java.io.{BufferedReader,BufferedWriter,InputStreamReader,File}
 import core.OperatingSystem
 
 class Statistics(os:OperatingSystem){
@@ -9,6 +9,10 @@ class Statistics(os:OperatingSystem){
   var htmlPage:core.outputMethod = null
 
   def generate(statsFolder:String,output:core.outputMethod) = {
+
+    if (!new File(statsFolder).exists)
+      new File(statsFolder).mkdirs
+
     htmlPage = output
     /**
      * Setup html page
