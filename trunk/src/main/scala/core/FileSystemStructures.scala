@@ -97,7 +97,7 @@ class FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:L
 }
 
 case class Directory(file:RandomAccessFile) {
-  val mappedBuffer:MappedByteBuffer = file.getChannel.map(MapMode.READ_WRITE,0,256*84) 
+  val mappedBuffer:MappedByteBuffer = file.getChannel.map(MapMode.READ_WRITE,0,256*84)
   
   val FCBs:Array[FileControlBlock] = for {
     fcb_i <- (0 to 83).toArray
@@ -108,9 +108,7 @@ case class Directory(file:RandomAccessFile) {
   } yield newFCB
   
   def rootDir:FileControlBlock = FCBs(0)
-
   assertEquals("Directory: FCBs.size",FCBs.size,84)
-
 
   /**
    * Returns a List[FileControlBlock] of the parameter "fcb" representing a directory
@@ -199,6 +197,71 @@ case class Directory(file:RandomAccessFile) {
   }
 
   /**
+   * places a new file, returns it's new fcb
+   */ 
+  def placeNewFile(absolutePath:String,name:String,size:Int,firstBlock:Int):FileControlBlock = getFCBFromAbsolutePath(absolutePath) match {
+    case Some(parentFCB) => {
+      if (!parentFCB.isDirectory)
+        throw new internalFSException("can't create file in "+absolutePath+", it's not a directory")
+
+      //look for a free fcb
+      FCBs.zipWithIndex.find(_._1.getId <0) match {
+        case Some(fcbZippedWithIndex) => {
+          val freeFCBIndex = fcbZippedWithIndex._2
+          //update parents last child sibling
+          parentFCB.getFirstBlock match {
+            case -1 => { //the directory has no children
+              FCBs(parentFCB.getId).setFirstBlock(freeFCBIndex) 
+            }
+            case firstChild => {
+              val siblings =  getFCBSiblings(FCBs(firstChild)) 
+              val lastSibling:FileControlBlock = siblings match{
+                case List() => FCBs(firstChild) //first Child is also the last
+                case _ => siblings.last
+              }
+
+              //update last Sibling
+              FCBs(lastSibling.getId).setSiblingId(freeFCBIndex)
+              flushFCBId(lastSibling.getId) 
+            }
+          }
+          
+          //place the new file
+          FCBs(freeFCBIndex) = new FileControlBlock(freeFCBIndex,name,size,firstBlock,now,now,'a',parentFCB.getId,-1)
+          flushFCBId(freeFCBIndex)
+          FCBs(freeFCBIndex)
+        }
+        case _ => throw internalFSException("Not enough space for a new FCB")
+      }
+    }
+    case _ => throw new internalFSException("Can't find FCB of "+absolutePath)
+  }
+
+
+/*{
+    val parentFCB:Option[FileControlBlock] = getFCBFromAbsolutePath(absolutePath)
+
+    if (!parentFCB.isDirectory)
+      throw new internalFSException("can't create file in "+absolutePath+", directory needed")
+    FCBs.zipWithIndex.find(_._1.getId < 0) match{
+      case Some(freeFCB) => {
+        //update last child of parent
+        val lastChild = getFCBChildren(parentFCB).last
+        
+        
+        //place new FCB
+        val freeFCBIndex = freeFCB._2
+
+        FCBs(freeFCBIndex) = new FileControlBlock(freeFCBIndex,name,size,firstBlock,now,now,'a',parentFCB.getId,-1)
+
+        //return the new FCB
+        FCBs(freeFCBIndex)
+      }
+      case _ => 
+    } 
+  }*/
+
+  /**
    * Returns an Option[FileControlBlock] if this path exists (wether a dir or file)
    * canonicalPath:String expresses the relative path from "parentFCB"
    * i.e. relativePath = "helloworld" and path(parentFCB)="~/" has an absolute of "~/helloworld"
@@ -248,7 +311,7 @@ case class Directory(file:RandomAccessFile) {
     else 
       throw new internalFSException("can't find path to FCB")
     case parentId => new fsPath(getPathToFCB(FCBs(parentId)).path+fcb.getName+"/")
-  }
+  } //end getPathToFCB
 } //end class Directory
 
 /**
@@ -257,7 +320,7 @@ case class Directory(file:RandomAccessFile) {
  * 2. -1 if Free
  * 3. # of block following (from 0 to 999)
  */ 
-sealed case class FileAllocation(value:Option[Int]){
+sealed case class FileAllocation(blockId:Int,value:Option[Int]){
   def isEndOfFile = value match { //wether it's the end of a file
     case Some(value) => false
     case _ => true //it's None (sequence of 3 whitespaces)
@@ -278,8 +341,55 @@ case class FAT(file:RandomAccessFile){
       fileAllocation_i_pos <- (0 to 2).toArray
     } yield mappedBuffer.get(fileAllocation_i*3+fileAllocation_i_pos)
 
-  } yield fileAllocationFromBuffer(fileAllocationBuffer)
-}
+  } yield fileAllocationFromBuffer(fileAllocation_i,fileAllocationBuffer)
+
+  /**
+   * Allocates blocks for a new File 
+   */
+  def allocate(data:Array[Byte]):List[FileAllocation] =  {
+    val freeAllocations = table.zipWithIndex.filter(_._1.isFree)
+    val blocksNeeded = data.size % 1024
+    val blockOffset = if (data.size%1024==0) 0 else 1
+      
+    if (freeAllocations.size<blocksNeeded+blockOffset)
+      throw new internalFSException("not enough space in FAT")
+
+    val allocations:List[FileAllocation] = freeAllocations.toList.map(freeAllocation => {
+      val blockIndex:Int = freeAllocation._2
+      if (blockIndex==freeAllocations.size){
+        //it's the last block 
+        table(blockIndex) = new FileAllocation(blockIndex,None)
+        flushFileAllocation(blockIndex)
+      }
+      else {
+        val nextFreeBlockIndex = freeAllocations.indexOf(freeAllocations(blockIndex))+1
+        table(blockIndex) = new FileAllocation(blockIndex,Some(nextFreeBlockIndex))
+        table(blockIndex)
+        flushFileAllocation(blockIndex)
+      }
+    })
+    allocations
+  }
+/**
+   * get all allocations from
+   */
+  def getAllocationsFrom(blockId:Int):List[Int] = table(blockId).nextBlockId match{
+    case Some(nextBlock) => blockId::getAllocationsFrom(nextBlock)
+    case _ => List(blockId)
+  }
+
+  def flushFileAllocation(blockIndex:Int):FileAllocation = {
+    val allocationIndexInMappedBuffer = blockIndex*3
+    val allocationData:Array[Byte] = table(blockIndex).nextBlockId match {
+      case Some(block) => stringToByteArray(extendToRightString(block.toString,3))
+      case _ => ArrayBuffer.fill(3)(32.toByte).toArray //white spaces
+    }
+
+    for (i <- 0 to 2)
+      mappedBuffer.put(allocationIndexInMappedBuffer+i,allocationData(i))
+    table(blockIndex)
+  }
+} //end FAT
 
 sealed case class Block(data:Array[Byte]){
   assert(data.size==1024)//1KB
@@ -294,4 +404,6 @@ case class Data(file:RandomAccessFile){
       block_i_pos <- (0 to 1023).toArray
     } yield mappedBuffer.get(block_i*1024+block_i_pos)
   } yield new Block(blockBuffer)
+
+  def get(block:Int) = blocks(block).data
 }

@@ -38,30 +38,46 @@ object FS{
   def fileControlBlockFromBuffer(buffer:Array[Byte]):FileControlBlock = {
     assertEquals("fileControlBlockFromBuffer",buffer.size,256)
     
-    val id:Int = byteArrayToString(buffer.slice(0,2)).toInt
-    val name:String = byteArrayToString(buffer.slice(2,2+32).toArray)
-    assertEquals("fileControlBlockFromBuffer: name.size",name.size,32)
-    val size:Int = byteArrayToString(buffer.slice(2+32,2+32+7)).trim.toInt
-    val firstBlock:Int = byteArrayToString(buffer.slice(2+32+7,2+32+7+4)).trim.toInt
-    val creationDate:Long = byteArrayToString(buffer.slice(2+32+7+4,2+32+7+4+32)).trim.toLong
-    val modificationDate:Long = byteArrayToString(buffer.slice(2+32+7+4+32,2+32+7+4+32+32)).trim.toLong
-    val fileOrDir:Char = buffer(2+32+7+4+32+32).toChar
+    try {
+      //returns -1 if it's "" or an int conversion from a string, exception is not handled 
+      def getIntInstanceFromString(s:String):Int = s.trim match {
+        case "" => -1
+        case someString => someString.toInt
+      }
 
-    val parentId:Int =  byteArrayToString(buffer.slice(2+32+7+4+32+32+1,2+32+7+4+32+32+1+2)).trim.toInt
-    
-    val siblingId:Int = byteArrayToString(buffer.slice(2+32+7+4+32+32+1+2,2+32+7+4+32+32+1+2+2)).trim.toInt
+      def getLongInstanceFromString(s:String):Long = s.trim match {
+        case "" => (-1).toLong
+        case someString => someString.toLong
+      }
 
-    new FileControlBlock(id,name,size,firstBlock,creationDate,modificationDate,fileOrDir,parentId,siblingId)
+      val id:Int = getIntInstanceFromString(byteArrayToString(buffer.slice(0,2)))
+      val name:String = byteArrayToString(buffer.slice(2,2+32).toArray)
+      assertEquals("fileControlBlockFromBuffer: name.size",name.size,32)
+      val size:Int = getIntInstanceFromString(byteArrayToString(buffer.slice(2+32,2+32+7)))
+      val firstBlock:Int = getIntInstanceFromString(byteArrayToString(buffer.slice(2+32+7,2+32+7+4)))
+      val creationDate:Long = getLongInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4,2+32+7+4+32)))
+      val modificationDate:Long = getLongInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4+32,2+32+7+4+32+32)))
+      val fileOrDir:Char = buffer(2+32+7+4+32+32).toChar
+      if (fileOrDir!='c' && fileOrDir!='a')
+        throw new internalFSException("invalid char for file or directory in FCB: "+fileOrDir)
+
+      val parentId:Int =  getIntInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4+32+32+1,2+32+7+4+32+32+1+2)))
+      
+      val siblingId:Int = getIntInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4+32+32+1+2,2+32+7+4+32+32+1+2+2)))
+      new FileControlBlock(id,name,size,firstBlock,creationDate,modificationDate,fileOrDir,parentId,siblingId)
+    } catch {
+      case e:java.lang.NumberFormatException => throw new internalFSException("Could not load FCB from buffer: "+buffer.mkString(","))
+    }  
   }
 
-  def fileAllocationFromBuffer(buffer:Array[Byte]):FileAllocation = {
+  def fileAllocationFromBuffer(id:Int,buffer:Array[Byte]):FileAllocation = {
     require(buffer.size==3,"fileAllocationFromBuffer size==3")
 
     byteArrayToString(buffer).trim match {
-      case "" =>  new FileAllocation(None) //end of File
+      case "" =>  new FileAllocation(id,None) //end of File
       case possibleIntValue => try{
         val intValue:Int = possibleIntValue.toInt
-        new FileAllocation(Some(intValue))
+        new FileAllocation(id,Some(intValue))
       } catch {
         case invalidFileAllocation:NumberFormatException => throw new internalFSException("invalid file allocation value found: "+byteArrayToString(buffer))
       }

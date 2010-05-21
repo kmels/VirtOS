@@ -1,6 +1,6 @@
 package programs
 
-import java.io.File
+import java.io.{File,RandomAccessFile}
 import core.{OperatingSystem,FileControlBlock,outputMethod}
 import exceptions.internalFSException
 import util.FS._
@@ -77,6 +77,61 @@ class cd(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
   }
 }
 
-/*class cp(os:OperatingSystem,absoluteSourcePath:String,absoluteDestinyPath:String,outputObject:outputMethod) extends system_program{
+class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
+  val programName = "cp"
+  val number_of_max_params = 1
+  val output = outputObject
+  
+  def copyFileInFS(srcBytes:Array[Byte],path:String):Unit = {
+    os.fs.placeNewFile(path,srcBytes)
+  }
+
+  def copyFileInHome(srcBytes:Array[Byte],path:String):Unit = {
+    val file:RandomAccessFile = new RandomAccessFile(new File(path),"w")
+    file.write(srcBytes) 
+  }
+
+  def exec:Unit = absoluteSourcePath match{
+    case fsPath(path) => {
+      //source is in this FS
+      val sourceFCB:FileControlBlock = os.fs.getFCBFromAbsolutePath(path) match{
+        case Some(fcb) => fcb
+        case _ => throw new internalFSException("file/directory not found in localfile system: "+path)
+      }
+      
+      if (sourceFCB.isFile) {
+        //get bytes
+        val sourceBytes:Array[Byte] = os.fs.getFileContents(path)
+
+        //check destiny
+        absoluteDestinyPath match{
+          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
+          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,pathToDestiny)
+        }
+      } else{
+        //copy directory
+      }
+    }
+    case homePath(path) => {
+      //source is in home FS
+      val homeFile = new File(path)
+      if (!homeFile.exists)
+        throw new internalFSException("home file doesn't exist: "+path)
+
+      if (!homeFile.isDirectory){
+        //get file bytes
+        val file:RandomAccessFile = new RandomAccessFile(path,"r")
+        val sourceBytes = new Array[Byte](file.length.toInt)
+        file.readFully(sourceBytes)
+
+        //check destiny
+        absoluteDestinyPath match{
+          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
+          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,pathToDestiny)
+        }
+      }else {
+        //copy directory
+      }
+    }
+  } //end exec 
 }
-*/

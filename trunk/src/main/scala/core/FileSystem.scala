@@ -98,12 +98,38 @@ class FileSystem(pathToFile:String){
   }
 
   /**
-   * Creates a new directory where "path" specifies, named "name" with content "content"
+   * Creates a new file where "path" specifies, with contents given by sourceBytes
   */ 
-/*  def placeFile(path:String,name:String,content:Array[Byte]):Unit = {
-    val fcb:FileControlBlock = fcbDirectory.placeNewFile(path,name)
-    val allocations:List[FileAllocation] = fat.allocate(fcb.firstBlock,content)
-    data.updateBlocksWith(allocations,content)
-  }*/
-  
-}
+  def placeNewFile(pathToFile:String,content:Array[Byte]):Unit = {
+    val pathComponents = pathToFile.split('/')
+    val pathToDir = pathToFile.slice(0,pathComponents.size)
+    val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
+    val fileSize = content.size
+    
+    val allocations:List[FileAllocation] = fat.allocate(content)
+    allocations match{
+      case List() => throw new internalFSException("not enough allocations")
+      case List(firstAllocation,_*) => {
+        fcbDirectory.placeNewFile(pathToDir,fileName,fileSize,firstAllocation.blockId)
+         // data.updateBlocksWith(allocations,content)
+      }
+    }    
+  }
+
+  def getFCBFromAbsolutePath(path:String) = fcbDirectory.getFCBFromAbsolutePath(path)
+
+  def getFileContents(path:String):Array[Byte] = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(path) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+path)
+    }
+    
+    if (!fcb.isFile)
+      throw new internalFSException("Not a file: "+path)
+      
+    val firstBlock = fcb.getFirstBlock
+    val blocks = fat.getAllocationsFrom(firstBlock)    
+    
+    blocks.foldLeft(Array[Byte]())((a,b) => a++data.get(b))
+  }
+} //end class FileSystem
