@@ -5,7 +5,7 @@ import exceptions.{unknownCommandException,typeMismatchException}
 import util.FS._
 
 class Shell(os:OperatingSystem) {
-  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du")
+  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du","cp")
   var currentPath:Path = new fsPath("~/")
 
   val absolutePathREGEX = """~/(.*)""".r
@@ -255,6 +255,15 @@ class Shell(os:OperatingSystem) {
           new cat(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
           throw new exceptions.typeMismatchException("cd accepts one parameter only")
+      }
+      case "cp" => {
+        if (parameters.size==2){
+          val sourcePath:Path = getAbsolutePathFromCanonical(parameters.head)
+          val destinyPath:Path = getAbsolutePathFromCanonical(parameters.last)
+          new cp(os,sourcePath,destinyPath,output)
+        }else{
+          throw new exceptions.typeMismatchException("cp accepts two parameters")
+        }
       }
     }
     val max_params = systemProgram.number_of_max_params

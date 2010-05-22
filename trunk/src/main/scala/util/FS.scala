@@ -11,6 +11,7 @@ object FS{
   case class homePath(val path:String) extends Path
 
   val whitespace:Byte = 32
+  val EOF:Byte = (-1).toByte
 
   def emptySequence(size:Int):Array[Byte] = ArrayBuffer.fill(size)(whitespace).toArray
 

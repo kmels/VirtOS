@@ -212,6 +212,7 @@ case class Directory(file:RandomAccessFile) {
           parentFCB.getFirstBlock match {
             case -1 => { //the directory has no children
               FCBs(parentFCB.getId).setFirstBlock(freeFCBIndex) 
+              flushFCBId(parentFCB.getId)
             }
             case firstChild => {
               val siblings =  getFCBSiblings(FCBs(firstChild)) 
@@ -327,6 +328,8 @@ sealed case class FileAllocation(blockId:Int,value:Option[Int]){
   }
   def isFree:Boolean = if (!isEndOfFile) value.get < 0 else false//if it's -1
   def nextBlockId:Option[Int] = if (!isEndOfFile) value else None
+
+  override def toString:String = "index: "+blockId+", next: "+nextBlockId
 }
 
 /**
@@ -346,42 +349,57 @@ case class FAT(file:RandomAccessFile){
   /**
    * Allocates blocks for a new File 
    */
-  def allocate(data:Array[Byte]):List[FileAllocation] =  {
-    val freeAllocations = table.zipWithIndex.filter(_._1.isFree)
-    val blocksNeeded = data.size % 1024
-    val blockOffset = if (data.size%1024==0) 0 else 1
-      
-    if (freeAllocations.size<blocksNeeded+blockOffset)
+  def allocate(numberOfBytesToAllocate:Int):List[FileAllocation] =  {
+    val freeAllocations:Array[(FileAllocation,Int)] = table.zipWithIndex.filter(_._1.isFree)
+    val netBlocksNeeded = numberOfBytesToAllocate / 1024
+    val blockOffset = if (numberOfBytesToAllocate%1024==0) 0 else 1
+    val blocksNeeded = netBlocksNeeded + blockOffset
+
+    if (freeAllocations.size<blocksNeeded)
       throw new internalFSException("not enough space in FAT")
 
-    val allocations:List[FileAllocation] = freeAllocations.toList.map(freeAllocation => {
-      val blockIndex:Int = freeAllocation._2
-      if (blockIndex==freeAllocations.size){
+    val assignedAllocations = freeAllocations.slice(0,blocksNeeded)
+    assert(assignedAllocations.size==blocksNeeded)
+
+    println("assigned allocations: "+assignedAllocations.mkString(","))
+    println("necesitados: "+blocksNeeded)
+    val allocations:List[FileAllocation] = assignedAllocations.zipWithIndex.toList.map(zippedAssignedAllocation => {
+      val indexOfAssignedAllocation = zippedAssignedAllocation._2
+      val assignedAllocation = zippedAssignedAllocation._1
+      val assignedBlockIndex:Int = assignedAllocation._2
+      println("updateando bloque asignado: "+assignedBlockIndex)
+      if (indexOfAssignedAllocation==blocksNeeded-1){
+        println("updateando el ultimo con None")
         //it's the last block 
-        table(blockIndex) = new FileAllocation(blockIndex,None)
-        flushFileAllocation(blockIndex)
+        table(assignedBlockIndex) = new FileAllocation(assignedBlockIndex,None)
+        flushFileAllocation(assignedBlockIndex)
       }
       else {
-        val nextFreeBlockIndex = freeAllocations.indexOf(freeAllocations(blockIndex))+1
-        table(blockIndex) = new FileAllocation(blockIndex,Some(nextFreeBlockIndex))
-        table(blockIndex)
-        flushFileAllocation(blockIndex)
+        val nextAssignedBlockIndex = assignedBlockIndex+1
+        println("updeteando con "+nextAssignedBlockIndex)
+        table(assignedBlockIndex) = new FileAllocation(assignedBlockIndex,Some(nextAssignedBlockIndex))
+        table(assignedBlockIndex)
+        flushFileAllocation(assignedBlockIndex)
       }
+      
     })
     allocations
   }
 /**
    * get all allocations from
    */
-  def getAllocationsFrom(blockId:Int):List[Int] = table(blockId).nextBlockId match{
+  def getAllocationsFrom(blockId:Int):List[Int] = {println("recibio"+blockId) ; table(blockId).nextBlockId match{
     case Some(nextBlock) => blockId::getAllocationsFrom(nextBlock)
     case _ => List(blockId)
-  }
+  }}
 
   def flushFileAllocation(blockIndex:Int):FileAllocation = {
     val allocationIndexInMappedBuffer = blockIndex*3
     val allocationData:Array[Byte] = table(blockIndex).nextBlockId match {
-      case Some(block) => stringToByteArray(extendToRightString(block.toString,3))
+      case Some(block) => {
+
+        stringToByteArray(extendToRightString(block.toString,3))
+      }
       case _ => ArrayBuffer.fill(3)(32.toByte).toArray //white spaces
     }
 
@@ -406,4 +424,48 @@ case class Data(file:RandomAccessFile){
   } yield new Block(blockBuffer)
 
   def get(block:Int) = blocks(block).data
+
+  /**
+   * writes to mapped buffer
+   */
+  def flushBlock(blockId:Int):Block = {
+    val blockIndexInMappedBuffer = blockId*1024
+    val blockData = blocks(blockId).data
+
+    for (i <- 0 to 1023)
+      mappedBuffer.put(blockIndexInMappedBuffer+i,blockData(i))
+    blocks(blockId)
+  }
+
+  def updateBlocksWith(blocksToUpdate:List[Int],content:Array[Byte]):Unit ={
+    //validation for internal use
+    val netBlocksNeededForContent = content.size/1024
+    val offsetOfBlocksNeeded = content.size%1024 match{
+      case 0 => 0
+      case _ => 1
+    }
+    val blocksNeeded = netBlocksNeededForContent+offsetOfBlocksNeeded
+    assert(blocksNeeded==blocksToUpdate.size)
+
+    //extend content, e.g. fill wasted bytes with -1 (simulating an EOF)
+    val endIndexOfNetBytes = netBlocksNeededForContent*1024
+    val numberOfBytesToExtend = 1024-content.size%1024//bytes to fill with -1
+    val extendedBytes:Array[Byte] = ArrayBuffer.fill(numberOfBytesToExtend)(EOF).toArray
+    val extendedContent:Array[Byte] = content.slice(0,endIndexOfNetBytes)++content.slice(endIndexOfNetBytes,endIndexOfNetBytes+content.size%1024)++extendedBytes
+
+    assert(extendedContent.size%1024==0) //it has to fit exactly in blocks of 1024 bytes
+
+    //parse data blocks from extended content
+    val dataBlocks:List[Block] = for { 
+      blockIndex <- (0 to blocksNeeded-1).toList
+      val blockData = extendedContent.slice(blockIndex*1024,blockIndex*1024+1024)
+    } yield new Block(blockData)
+
+    blocksToUpdate.zipWithIndex.foreach(zippedBlock => {
+      val blockToUpdateID = zippedBlock._1
+      val indexOfUpdatingBlock = zippedBlock._2
+      blocks(blockToUpdateID) = dataBlocks(indexOfUpdatingBlock)
+      flushBlock(blockToUpdateID)
+    })
+  }
 }

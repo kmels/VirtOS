@@ -14,6 +14,7 @@ class ls(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
     path match {
       case fsPath(p) => {
         val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p)
+        println("encontro : "+listOfFiles.size+" hijos")
         listOfFiles.foreach(fcb => output.println(fcb.getName))
       }
       case homePath(p) => {
@@ -139,7 +140,7 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
     }
     case homePath(path) => {
       //source is in home FS
-      val homeFile = new File(path)
+      val homeFile = new File(os.pathToHome+path)
       if (!homeFile.exists)
         throw new internalFSException("home file doesn't exist: "+path)
 
@@ -182,5 +183,5 @@ class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) 
     output.print(fileBytes.map(_.toChar).mkString) 
   } catch {
     case e => output.println(e.toString)
-  }
+  } 
 }
