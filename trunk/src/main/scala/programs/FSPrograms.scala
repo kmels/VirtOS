@@ -13,10 +13,12 @@ class ls(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
     def exec():Unit = {
       path match {
         case fsPath(p) => {
+          println("fs path!: "+p)
           val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p)
           listOfFiles.foreach(fcb => output.println(fcb.getName))
         }
         case homePath(p) => {
+          println("home path!: "+p)
           val absoluteHomePathFile = new File(os.pathToHome+p)
           if (absoluteHomePathFile.isDirectory)
             absoluteHomePathFile.listFiles.foreach(file => output.println(file.getName))
@@ -77,6 +79,20 @@ class cd(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
   }
 }
 
+class du(os:OperatingSystem,outputObject:outputMethod) extends system_program{
+  val programName = "du"
+  val number_of_max_params =0
+  val output = outputObject
+
+  def exec:Unit = {
+    /*val fsSizeInBytes = os.fs.getSizeInBytes
+    val freeSpaceInBytes = os.fs.getFreeSpaceInBytes
+    val freeSpaceInKB:Float = freeSpace/1024
+    val fsSizeInKB:Float = fsSizeInBytes/1024
+    output.println("Free space: "+freeSpaceInBytes+" bytes => "+freeSpaceInKB+"KB")
+    output.println("Total space: "+fsSizeInBytes+" bytes => "+fsSizeInKB+"KB")*/
+  }
+}
 class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "cp"
   val number_of_max_params = 1
@@ -134,4 +150,26 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
       }
     }
   } //end exec 
+}
+
+class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) extends system_program {
+  val programName = "cat"
+  val number_of_max_params = 1
+  val output = outputObject
+
+  def exec:Unit = {
+    val fileBytes:Array[Byte] = absolutePathToFile match{
+      case fsPath(path) => os.fs.getFileContents(path)
+      case homePath(path) => {    
+        if (new File(path).isDirectory)
+          throw new internalFSException(path+ " is not a file but a directory")
+
+        val file:RandomAccessFile = new RandomAccessFile(path,"r")
+        val sourceBytes = new Array[Byte](file.length.toInt)
+        file.readFully(sourceBytes)
+        sourceBytes
+      }
+    }
+    output.print(fileBytes.map(_.toChar).mkString) 
+  }
 }

@@ -1,0 +1,15 @@
+; Crea una thread que escribe en memoria
+; Este programa debe leer el mismo valor y desplegarlo
+
+thread "thread2" r0
+sleep
+sleep
+sleep
+sleep
+sleep
+
+set r15 5
+ReadMem r15 r14
+echo r14
+
+end 1

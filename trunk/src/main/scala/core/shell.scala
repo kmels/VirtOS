@@ -5,7 +5,7 @@ import exceptions.{unknownCommandException,typeMismatchException}
 import util.FS._
 
 class Shell(os:OperatingSystem) {
-  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB")
+  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du")
   var currentPath:Path = new fsPath("~/")
 
   val absolutePathREGEX = """~/(.*)""".r
@@ -15,7 +15,10 @@ class Shell(os:OperatingSystem) {
    */ 
   def getAbsolutePathFromCanonical(canonicalPath:String):Path = canonicalPath match {
     case absolutePathREGEX(canonical) => new fsPath(canonicalPath)
-    case hostPathREGEX(canonical) => new homePath(canonicalPath)
+    case hostPathREGEX(canonical) => {
+      println("hostpathREGEX, "+os.pathToHome)
+      new homePath(canonical)
+    }
     case ".." => currentPath match{
       case fsPath("~/") => new fsPath("~/")
       case _ => {
@@ -202,10 +205,14 @@ class Shell(os:OperatingSystem) {
   /**
    * Executes a system program e.g. "ps" or "ls"
    */
-  def executeSystemProgram(programName:String,parameters:List[String],output:outputMethod):Unit = {
+  def executeSystemProgram(programName:String,parameters:List[String],output:outputMethod):Unit = {   
     //instance the program
     val systemProgram:system_program = programName match{
-      case "ls" => new ls(os,currentPath,output)
+      case "ls" => parameters.size match {
+        case 0 => new ls(os,currentPath,output) //list current path
+        case 1 => new ls(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        case _ => throw new exceptions.typeMismatchException("ls receveis one parameter at most, received: "+parameters.mkString(","))
+      }
       case "ps" => new ps(os,output)
       case "kill" => {
         if (parameters != 0){
@@ -238,7 +245,19 @@ class Shell(os:OperatingSystem) {
         if (parameters.size==1)
           new cd(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
-          throw new exceptions.typeMismatchException("cd excepts one parameter only")
+          throw new exceptions.typeMismatchException("cd accepts one parameter only")
+      }
+      case "du" => {
+        if (parameters.size==0)
+          new du(os,output)
+        else
+           throw new exceptions.typeMismatchException("du accepts no parameters")
+      }
+      case "cat" =>{
+        if (parameters.size==1)
+          new cat(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        else
+          throw new exceptions.typeMismatchException("cd accepts one parameter only")
       }
     }
     val max_params = systemProgram.number_of_max_params
