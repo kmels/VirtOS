@@ -15,10 +15,7 @@ class Shell(os:OperatingSystem) {
    */ 
   def getAbsolutePathFromCanonical(canonicalPath:String):Path = canonicalPath match {
     case absolutePathREGEX(canonical) => new fsPath(canonicalPath)
-    case hostPathREGEX(canonical) => {
-      println("hostpathREGEX, "+os.pathToHome)
-      new homePath(canonical)
-    }
+    case hostPathREGEX(canonical) => new homePath(canonical)
     case ".." => currentPath match{
       case fsPath("~/") => new fsPath("~/")
       case _ => {
