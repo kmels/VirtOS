@@ -39,14 +39,23 @@ class pwd(path:Path,outputObject:outputMethod) extends system_program{
   }
 }
 
-class mkdir(os:OperatingSystem,currentPath:Path,dirName:String,outputObject:outputMethod) extends system_program{
+class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "mkdir"
   val number_of_max_params = 1
   val output = outputObject
 
-  def exec:Unit = currentPath match {
-    case fsPath(p) => os.fs.placeDirectory(p,dirName) 
-    case homePath(p) => new File(os.pathToHome+p+"/"+dirName).mkdirs
+  val pathComponents:Array[String] = newDirPath.path.split('/')
+  val pathToParent:String = pathComponents.slice(0,pathComponents.size-1).mkString("/") match{
+    case "" => ""
+    case somePathToParent => somePathToParent+"/"
+  }
+  val newDirName:String = pathComponents.last
+  println("path to parent: "+pathToParent)
+  println("new dir name: "+newDirName)
+
+  def exec:Unit = newDirPath match {
+    case fsPath(pathToNewDir) => os.fs.placeDirectory(pathToParent,newDirName) 
+    case homePath(pathToNewDir) => new File(os.pathToHome+pathToParent+newDirName).mkdirs
   }
 }
 

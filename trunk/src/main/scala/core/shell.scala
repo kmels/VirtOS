@@ -234,7 +234,7 @@ class Shell(os:OperatingSystem) {
       case "pwd" => new pwd(currentPath,output)
       case "mkdir" => 
         if (parameters.size==1)
-          new mkdir(os,currentPath,parameters(0),output)
+          new mkdir(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
           throw new exceptions.typeMismatchException("Mkdir accepts one parameter only")
       case "lsFCB" => new lsFCB(os,output)
