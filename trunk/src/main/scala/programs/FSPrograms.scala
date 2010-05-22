@@ -113,7 +113,7 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
   }
 
   def copyFileInHome(srcBytes:Array[Byte],absolutePath:String):Unit = {
-    val file:RandomAccessFile = new RandomAccessFile(new File(absolutePath),"w")
+    val file:RandomAccessFile = new RandomAccessFile(new File(absolutePath),"rw")
     file.write(srcBytes) 
   }
 
@@ -132,7 +132,7 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
         //check destiny
         absoluteDestinyPath match{
           case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
-          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,pathToDestiny)
+          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,os.pathToHome+pathToDestiny)
         }
       } else{
         //copy directory
