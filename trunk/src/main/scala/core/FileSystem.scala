@@ -103,11 +103,7 @@ class FileSystem(pathToFile:String){
   def placeNewFile(pathToFile:String,content:Array[Byte]):Unit = {
     val pathComponents = pathToFile.split('/')
     val pathToDir:String = pathComponents.slice(0,pathComponents.size-1).mkString("/")
-
-    println("path components: "+pathComponents.mkString(","))
-    println("path to dir: "+pathToDir)
     val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
-    println("filename: "+fileName)
     val fileSize = content.size
     
     val allocations:List[FileAllocation] = fat.allocate(content.size)

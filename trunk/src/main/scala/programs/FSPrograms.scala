@@ -14,7 +14,6 @@ class ls(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
     path match {
       case fsPath(p) => {
         val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p)
-        println("encontro : "+listOfFiles.size+" hijos")
         listOfFiles.foreach(fcb => output.println(fcb.getName))
       }
       case homePath(p) => {
@@ -41,6 +40,8 @@ class pwd(path:Path,outputObject:outputMethod) extends system_program{
 }
 
 class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program{
+  println("making dir: "+newDirPath)
+
   val programName = "mkdir"
   val number_of_max_params = 1
   val output = outputObject
@@ -51,8 +52,6 @@ class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extend
     case somePathToParent => somePathToParent+"/"
   }
   val newDirName:String = pathComponents.last
-  println("path to parent: "+pathToParent)
-  println("new dir name: "+newDirName)
 
   def exec:Unit = newDirPath match {
     case fsPath(pathToNewDir) => os.fs.placeDirectory(pathToParent,newDirName) 
@@ -108,17 +107,62 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
   val number_of_max_params = 1
   val output = outputObject
   
-  def copyFileInFS(srcBytes:Array[Byte],path:String):Unit = {
-    println("copiando file en local FS con path: "+path)
-    os.fs.placeNewFile(path,srcBytes)
+  /**
+   * copies a file in local file system of content srcBytes in path
+   */
+  private def copyFileInFS(srcBytes:Array[Byte],localPath:fsPath):Unit = {
+    println("copiando file en local FS con path: "+localPath.path)
+    os.fs.placeNewFile(localPath.path,srcBytes)
   }
 
-  def copyFileInHome(srcBytes:Array[Byte],absolutePath:String):Unit = {
-    val file:RandomAccessFile = new RandomAccessFile(new File(absolutePath),"rw")
+  /**
+   * analog to copyFileINFS but in home fs
+   */
+  private def copyFileInHome(srcBytes:Array[Byte],homePath:homePath):Unit = {
+    val absoluteHostPath:String = os.pathToHome+homePath.path
+    println("copiando file en host FS con path: "+absoluteHostPath)
+    val file:RandomAccessFile = new RandomAccessFile(new File(absoluteHostPath),"rw")
     file.write(srcBytes) 
   }
 
-  def copyDir(sourcePath:Path,destinyPath:Path):Unit = {
+  /**
+   * copies a dir recursively from sourcePath to destinyPath (both could be either local or from host FS)
+   */
+  private def copyDir(sourcePath:Path,destinyPath:Path):Unit = sourcePath match{
+    case fsPath(absoluteLocalPathToSourceDir) => {
+    }
+    case homePath(homePathToSourceDir) =>{
+      println("copiando de :"+homePathToSourceDir+" a "+destinyPath.path)
+      val absoluteHomePathToSourceDir = os.pathToHome + homePathToSourceDir
+      val sourceDirFile = new File(absoluteHomePathToSourceDir)
+      
+      if (!sourceDirFile.exists)
+        throw new internalFSException("source directory doesn't exist: "+homePathToSourceDir)
+
+      //make dir first, so we can copy files/dirs inside 
+      new mkdir(os,destinyPath,output).exec
+      val filesToCopy:Array[File] = sourceDirFile.listFiles
+      
+      filesToCopy.foreach( file =>{
+        if (file.isDirectory){
+          //get path relative to os.pathToHome
+          val homePathToSourceDir = file.getAbsolutePath.slice(os.pathToHome.size,file.getAbsolutePath.size)
+          destinyPath match {
+            case fsPath(localPathToDestiny) => copyDir(new homePath(homePathToSourceDir),new fsPath(localPathToDestiny+"/"+file.getName))
+            case homePath(homePathToDestiny) => copyDir(new homePath(homePathToSourceDir),new homePath(homePathToDestiny+"/"+file.getName))
+          }
+        } else{
+          //get file bytes
+          val sourceBytes = new Array[Byte](file.length.toInt)
+          new RandomAccessFile(file,"r").readFully(sourceBytes)
+          //where to copy?
+          destinyPath match{
+            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(absoluteLocalPathToDestinyDir+"/"+file.getName))
+            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(absoluteHomePathToDestinyDir+"/"+file.getName))
+          }
+        }
+      })
+    }
   }
 
   def exec:Unit = absoluteSourcePath match{
@@ -135,8 +179,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
 
         //check destiny
         absoluteDestinyPath match{
-          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
-          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,os.pathToHome+pathToDestiny)
+          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,new fsPath(pathToDestiny))
+          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,new homePath(pathToDestiny))
         }
       } else
         //copy directory
@@ -156,8 +200,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
 
         //check destiny
         absoluteDestinyPath match{
-          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
-          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,pathToDestiny)
+          case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,new fsPath(pathToDestiny))
+          case homePath(pathToDestiny) => copyFileInHome(sourceBytes,new homePath(pathToDestiny))
         }
       }else 
         //copy directory, source: home FS
