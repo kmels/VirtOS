@@ -130,9 +130,32 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
    */
   private def copyDir(sourcePath:Path,destinyPath:Path):Unit = sourcePath match{
     case fsPath(absoluteLocalPathToSourceDir) => {
+      val sourceDirFCB = os.fs.getFCBFromAbsolutePath(absoluteLocalPathToSourceDir)
+
+      //make destiny dir first, so we can copy files/dirs inside
+      new mkdir(os,destinyPath,output).exec
+      val filesToCopy:List[FileControlBlock] = os.fs.getDirectoryContents(absoluteLocalPathToSourceDir) 
+      
+      filesToCopy.foreach(fileFCB => {
+        val localSourcePath:fsPath = os.fs.getPathToFCB(fileFCB)
+        if (fileFCB.isDirectory) {
+          //make new directory in destiny
+          destinyPath match {
+            case fsPath(localPathToDestiny) => copyDir(localSourcePath,new fsPath(localPathToDestiny+"/"+fileFCB.getName))
+            case homePath(homePathToDestiny) => copyDir(localSourcePath,new homePath(homePathToDestiny+"/"+fileFCB.getName))
+          }
+        }else{
+          //copy file, 
+          val sourceBytes = os.fs.getFileContents(localSourcePath.path)
+          //where to copy?
+          destinyPath match{
+            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(absoluteLocalPathToDestinyDir+"/"+fileFCB.getName))
+            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(absoluteHomePathToDestinyDir+"/"+fileFCB.getName))
+          }
+        }
+      })
     }
     case homePath(homePathToSourceDir) =>{
-      println("copiando de :"+homePathToSourceDir+" a "+destinyPath.path)
       val absoluteHomePathToSourceDir = os.pathToHome + homePathToSourceDir
       val sourceDirFile = new File(absoluteHomePathToSourceDir)
       
