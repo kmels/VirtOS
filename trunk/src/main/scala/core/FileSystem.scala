@@ -102,13 +102,15 @@ class FileSystem(pathToFile:String){
   */ 
   def placeNewFile(pathToFile:String,content:Array[Byte]):Unit = {
     val pathComponents = pathToFile.split('/')
-    val pathToDir = pathToFile.slice(0,pathComponents.size)
+    val pathToDir:String = pathComponents.slice(0,pathComponents.size-1).mkString("/")
+
+    println("path components: "+pathComponents.mkString(","))
+    println("path to dir: "+pathToDir)
     val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
+    println("filename: "+fileName)
     val fileSize = content.size
     
     val allocations:List[FileAllocation] = fat.allocate(content.size)
-    
-    println("allocations given: "+allocations.mkString(","))
 
     allocations match{
       case List() => throw new internalFSException("not enough allocations")
@@ -136,12 +138,8 @@ class FileSystem(pathToFile:String){
     val blocks = fat.getAllocationsFrom(firstBlock)
     
     val extendedContent = blocks.foldLeft(Array[Byte]())((a,b) => a++data.get(b))
-    //yield content only, until EOF (-1)
-    val EOFIndex:Int = extendedContent.indexOf(EOF) 
-    
-    if (EOFIndex<0)
-      throw new internalFSException("file:"+path+" doens't have an EOF")
-
+    //yield content only, until EOF, that is the size of the file
+    val EOFIndex:Int = fcb.getSize
     extendedContent.slice(0,EOFIndex)   
   }
 } //end class FileSystem

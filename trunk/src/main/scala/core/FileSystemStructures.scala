@@ -361,22 +361,17 @@ case class FAT(file:RandomAccessFile){
     val assignedAllocations = freeAllocations.slice(0,blocksNeeded)
     assert(assignedAllocations.size==blocksNeeded)
 
-    println("assigned allocations: "+assignedAllocations.mkString(","))
-    println("necesitados: "+blocksNeeded)
     val allocations:List[FileAllocation] = assignedAllocations.zipWithIndex.toList.map(zippedAssignedAllocation => {
       val indexOfAssignedAllocation = zippedAssignedAllocation._2
       val assignedAllocation = zippedAssignedAllocation._1
       val assignedBlockIndex:Int = assignedAllocation._2
-      println("updateando bloque asignado: "+assignedBlockIndex)
       if (indexOfAssignedAllocation==blocksNeeded-1){
-        println("updateando el ultimo con None")
         //it's the last block 
         table(assignedBlockIndex) = new FileAllocation(assignedBlockIndex,None)
         flushFileAllocation(assignedBlockIndex)
       }
       else {
         val nextAssignedBlockIndex = assignedBlockIndex+1
-        println("updeteando con "+nextAssignedBlockIndex)
         table(assignedBlockIndex) = new FileAllocation(assignedBlockIndex,Some(nextAssignedBlockIndex))
         table(assignedBlockIndex)
         flushFileAllocation(assignedBlockIndex)

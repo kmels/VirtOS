@@ -109,12 +109,16 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
   val output = outputObject
   
   def copyFileInFS(srcBytes:Array[Byte],path:String):Unit = {
+    println("copiando file en local FS con path: "+path)
     os.fs.placeNewFile(path,srcBytes)
   }
 
   def copyFileInHome(srcBytes:Array[Byte],absolutePath:String):Unit = {
     val file:RandomAccessFile = new RandomAccessFile(new File(absolutePath),"rw")
     file.write(srcBytes) 
+  }
+
+  def copyDir(sourcePath:Path,destinyPath:Path):Unit = {
   }
 
   def exec:Unit = absoluteSourcePath match{
@@ -134,9 +138,9 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
           case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
           case homePath(pathToDestiny) => copyFileInHome(sourceBytes,os.pathToHome+pathToDestiny)
         }
-      } else{
+      } else
         //copy directory
-      }
+        copyDir(absoluteSourcePath,absoluteDestinyPath)
     }
     case homePath(path) => {
       //source is in home FS
@@ -155,12 +159,12 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
           case fsPath(pathToDestiny) => copyFileInFS(sourceBytes,pathToDestiny)
           case homePath(pathToDestiny) => copyFileInHome(sourceBytes,pathToDestiny)
         }
-      }else {
-        //copy directory
-      }
-    }
-  } //end exec 
-}
+      }else 
+        //copy directory, source: home FS
+        copyDir(absoluteSourcePath,absoluteDestinyPath)
+    } //end exec 
+  }
+} //end cp
 
 class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) extends system_program {
   val programName = "cat"
