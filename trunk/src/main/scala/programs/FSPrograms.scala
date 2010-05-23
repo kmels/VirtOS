@@ -34,9 +34,10 @@ class pwd(path:Path,outputObject:outputMethod) extends system_program{
   val number_of_max_params = 0
   val output = outputObject
   
-  def exec:Unit ={
-    output.println(path.path)
-  }
+  def exec:Unit = output.println(path match {
+    case fsPath(localPath) => localPath
+    case homePath(pathToLocal) => "@"+pathToLocal
+  }) 
 }
 
 class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program{
@@ -81,7 +82,13 @@ class cd(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
           case Some(fcb) => os.shell.setCurrentPath(os.fs.getPathToFCB(fcb))
           case _ => throw new internalFSException("directory doesn't exist")
         }}
-      case homePath(relativePath) => {} //to do
+      case homePath(relativePath) => {
+        val absoluteHostPath = os.pathToHome+relativePath
+        if (!new File(absoluteHostPath).exists)
+          throw new internalFSException("directory doesn't exist")
+        else
+          os.shell.setCurrentPath(new homePath(relativePath))
+      }
     }
   } catch {
     case e => output.println(e.toString)
@@ -242,6 +249,9 @@ class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) 
     val fileBytes:Array[Byte] = absolutePathToFile match{
       case fsPath(path) => os.fs.getFileContents(path)
       case homePath(path) => {    
+        if (!new File(os.pathToHome+path).exists)
+          throw new internalFSException(path+" file: doesn't exist")
+
         if (new File(os.pathToHome+path).isDirectory)
           throw new internalFSException(path+ " is not a file but a directory")
 

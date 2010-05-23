@@ -13,6 +13,8 @@ object FS{
   val whitespace:Byte = 32
   val EOF:Byte = (3).toByte
 
+  def appendSlash(s:String):String = if (s.endsWith("/")) s else s+"/"
+
   def emptySequence(size:Int):Array[Byte] = ArrayBuffer.fill(size)(whitespace).toArray
 
   def now:Long = Calendar.getInstance().getTime.getTime
