@@ -13,13 +13,23 @@ class ls(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
   def exec():Unit = try {
     path match {
       case fsPath(p) => {
-        val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p)
-        listOfFiles.foreach(fcb => output.println(fcb.getName))
+        val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p).sortBy(_.getName)
+        listOfFiles.foreach(fcb => output.println(
+          if (fcb.isDirectory)
+            appendSlash(fcb.getName)
+          else
+            fcb.getName
+        ))
       }
       case homePath(p) => {
         val absoluteHomePathFile = new File(os.pathToHome+p)
         if (absoluteHomePathFile.isDirectory)
-          absoluteHomePathFile.listFiles.foreach(file => output.println(file.getName))
+          absoluteHomePathFile.listFiles.foreach(file => output.println(
+            if (file.isDirectory)
+              appendSlash(file.getName)
+            else 
+              file.getName
+          ))
         else
           throw internalFSException(absoluteHomePathFile.getName+" is not a directory")
       }
