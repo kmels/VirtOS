@@ -266,3 +266,13 @@ class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) 
     case e => output.println(e.toString)
   } 
 }
+
+/*class mount(os:OperatingSystem,pathToFS:Path,mountPath:Path,outputObject:outputMethod) extends system_program{
+  val programName = "mount"
+  val number_of_max_params = 2
+  val output = outputObject
+
+  val mountedFS = new FileSystem()
+  def exec:Unit = try{
+  }
+}*/

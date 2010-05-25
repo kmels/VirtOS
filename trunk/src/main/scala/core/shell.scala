@@ -10,31 +10,35 @@ class Shell(os:OperatingSystem) {
 
   val absolutePathREGEX = """~/(.*)""".r
   val hostPathREGEX = """@/(.*)""".r
-  val parentRelativePath = """..(/.*)?""".r
+  val parentRelativePath = """../(.*)""".r
   /**
    * Returns an absolutePath:Path given a canonicalPath (relative to the currentDir)
    */ 
   def getAbsolutePathFromCanonical(canonicalPath:String):Path = canonicalPath match {
     case absolutePathREGEX(canonical) => new fsPath(appendSlash(canonicalPath))
     case hostPathREGEX(canonical) => new homePath(appendSlash(canonical))
-    case parentRelativePath(relativePathOption) => {
-      val relativePath:String = relativePathOption match{
-        case null => ""
-        case relative => relative
+    case ".." => currentPath match{
+      case fsPath("~/") => currentPath
+      case fsPath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/') 
+        new fsPath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
       }
-
-      currentPath match{
-        case fsPath("~/") => new fsPath("~/"+relativePath)
-        case fsPath(localPath) => {
-          val pathComponents:Array[String] = (localPath+canonicalPath).split('/')
-          val absolutePath = pathComponents.slice(0,pathComponents.size-2)
-          new fsPath(appendSlash(absolutePath.mkString("/")+relativePath))
-        }
-        case homePath(homePath) => {
-          val pathComponents:Array[String] = (homePath+canonicalPath).split('/')
-          val absolutePath = pathComponents.slice(0,pathComponents.size-2)
-          new homePath(appendSlash(absolutePath.mkString("/")+relativePath))
-        }
+      case homePath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/') 
+        new homePath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
+      }
+    }
+    case parentRelativePath(relativePath) => currentPath match{
+      case fsPath("~/") => new fsPath("~"+relativePath)
+      case fsPath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/')
+        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
+        new fsPath(pathToParent+relativePath)
+      }
+      case homePath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/')
+        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
+        new homePath(pathToParent+relativePath)
       }
     }
     case _ => currentPath match {
@@ -42,7 +46,7 @@ class Shell(os:OperatingSystem) {
       case homePath(current) => new homePath(current+appendSlash(canonicalPath))
     }
   }
-
+    
   /**
    * Sets the shell current dir
    */

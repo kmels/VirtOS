@@ -1,9 +1,9 @@
 <sys>
-  <fs path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/fs"/>
+  <fs path="/Users/kmels/Desarrollo/uvg/cc3002/trunk/FS.txt"/>
 <!-- test <fs path="/Users/kmels/Desktop/FS.txt"/> !-->
   <directories>
-    <home path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/homeDir/"/>
-    <logs path="/Users/kmels/Desarrollo/uvg/cc3002-sbt/trunk/logs/"/>
+    <home path="/Users/kmels/Desarrollo/uvg/cc3002/homeDir/"/>
+    <logs path="/Users/kmels/Desarrollo/uvg/cc3002/trunk/logs/"/>
   </directories>
   <memory ram="8" swap="8" page="16"/>
   <scheduling startQueue="1">

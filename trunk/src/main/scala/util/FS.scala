@@ -11,7 +11,7 @@ object FS{
   case class homePath(val path:String) extends Path
 
   val whitespace:Byte = 32
-  val EOF:Byte = (3).toByte
+  val EOF:Byte = whitespace //for compatibility
 
   def appendSlash(s:String):String = if (s.endsWith("/")) s else s+"/"
 
