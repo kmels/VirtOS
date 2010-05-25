@@ -76,7 +76,7 @@ class FileSystem(pathToFile:String){
     val fcb:FileControlBlock = fcbDirectory.placeNewDirectory(path,name)
   }
 
-  def getDirectoryContents(absolutePath:String):List[FileControlBlock] = fcbDirectory.getDirectoryContents(absolutePath)    
+  def getDirectoryFiles(absolutePath:String):List[FileControlBlock] = fcbDirectory.getDirectoryContents(absolutePath)    
 
   def getDirectoryFCB(absolutePath:String):Option[FileControlBlock] = {
     fcbDirectory.getFCBFromAbsolutePath(absolutePath) match {
@@ -120,6 +120,11 @@ class FileSystem(pathToFile:String){
 
   def getFCBFromAbsolutePath(path:String) = fcbDirectory.getFCBFromAbsolutePath(path)
 
+  /**
+   * returns the content of a file
+   * @throws internalFSException if path is invalid
+   * @throws internalFSException if specified path is a directory
+   */ 
   def getFileContents(path:String):Array[Byte] = {
     val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(path) match{
       case Some(fileControlBlock) => fileControlBlock
@@ -138,4 +143,42 @@ class FileSystem(pathToFile:String){
     val EOFIndex:Int = fcb.getSize
     extendedContent.slice(0,EOFIndex)   
   }
+
+  /**
+   * measures space in bytes for a given path, and returns its value. If it's a directory, it returns the sum of its children size recursively.
+   */
+  def getSpaceInBytesUsedIn(absolutePath:String):Int = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(absolutePath) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+absolutePath)
+    }
+
+    fcb.isFile match {
+      case true => fcb.getSize
+      case _ => {
+        val fileSizes:List[Int] = getDirectoryFiles(absolutePath).map(fcb =>{
+          if (fcb.isFile)
+            fcb.getSize
+          else
+            getSpaceInBytesUsedIn(getPathToFCB(fcb).path)
+        })
+        //sum the file sizes
+        fileSizes.size match{
+          case 0 => 0
+          case _ => fileSizes.reduceLeft(_+_)
+        }        
+      }
+    }
+  }
+
+
+  /**
+   * Returns the space used in this fs.
+   */
+  def getSpaceUsedInBytes:Int = {
+    val usedFileSizes:List[Int] = fcbDirectory.FCBs.filter(_.getId  > -1).toList.map(_.getSize)
+    usedFileSizes.reduceLeft(_+_)
+  }
+
+  def getSize:Int = 1024*1024
 } //end class FileSystem

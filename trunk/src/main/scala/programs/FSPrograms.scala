@@ -13,7 +13,7 @@ class ls(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
   def exec():Unit = try {
     path match {
       case fsPath(p) => {
-        val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryContents(p).sortBy(_.getName)
+        val listOfFiles:List[FileControlBlock] = os.fs.getDirectoryFiles(p).sortBy(_.getName)
         listOfFiles.foreach(fcb => output.println(
           if (fcb.isDirectory)
             appendSlash(fcb.getName)
@@ -105,18 +105,28 @@ class cd(os:OperatingSystem,path:Path,outputObject:outputMethod) extends system_
   }
 }
 
-class du(os:OperatingSystem,outputObject:outputMethod) extends system_program{
+class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "du"
   val number_of_max_params =0
   val output = outputObject
 
+  val fsSizeInBytes = os.fs.getSize
+  val freeSpaceInBytes = fsSizeInBytes - os.fs.getSpaceUsedInBytes
+  
+  //bytes to kilo
+  def toKB(bytes:Int):Float = bytes/1024
+
   def exec:Unit = {
-    /*val fsSizeInBytes = os.fs.getSizeInBytes
-     val freeSpaceInBytes = os.fs.getFreeSpaceInBytes
-     val freeSpaceInKB:Float = freeSpace/1024
-     val fsSizeInKB:Float = fsSizeInBytes/1024
-     output.println("Free space: "+freeSpaceInBytes+" bytes => "+freeSpaceInKB+"KB")
-     output.println("Total space: "+fsSizeInBytes+" bytes => "+fsSizeInKB+"KB")*/
+     output.println("Total Free space: "+freeSpaceInBytes+" bytes => "+toKB(freeSpaceInBytes)+"KB")
+     output.println("Total space: "+fsSizeInBytes+" bytes => "+toKB(fsSizeInBytes)+"KB")
+     specifiedPath match {
+       case fsPath(path) => {
+         val spaceUsedInPath = os.fs.getSpaceInBytesUsedIn(path)
+         val percentageOfTotal:Float = spaceUsedInPath/fsSizeInBytes
+         output.println("Space used in specified path: \n"+spaceUsedInPath+"Bytes => "+toKB(spaceUsedInPath)+"KB ("+percentageOfTotal+"% of total)")
+       }
+       case _ => output.println("Not yet implemented")
+     } 
   }
 }
 class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
@@ -151,7 +161,7 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
 
       //make destiny dir first, so we can copy files/dirs inside
       new mkdir(os,destinyPath,output).exec
-      val filesToCopy:List[FileControlBlock] = os.fs.getDirectoryContents(absoluteLocalPathToSourceDir) 
+      val filesToCopy:List[FileControlBlock] = os.fs.getDirectoryFiles(absoluteLocalPathToSourceDir) 
       
       filesToCopy.foreach(fileFCB => {
         val localSourcePath:fsPath = os.fs.getPathToFCB(fileFCB)

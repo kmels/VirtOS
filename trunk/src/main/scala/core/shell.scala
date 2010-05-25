@@ -264,11 +264,10 @@ class Shell(os:OperatingSystem) {
         else
           throw new exceptions.typeMismatchException("cd accepts one parameter only")
       }
-      case "du" => {
-        if (parameters.size==0)
-          new du(os,output)
-        else
-           throw new exceptions.typeMismatchException("du accepts no parameters")
+      case "du" => parameters.size match {
+        case 0 => new du(os,currentPath,output)
+        case 1 => new du(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        case _ => throw new exceptions.typeMismatchException("du accepts no parameters")
       }
       case "cat" =>{
         if (parameters.size==1)

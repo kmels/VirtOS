@@ -2,12 +2,56 @@ package core
 import programs._
 import java.io.File
 import exceptions.{unknownCommandException,typeMismatchException}
+import util.FS._
 
 class Shell(os:OperatingSystem) {
-  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB")
-  var currentDir = "~/"
-  
-  def setCurrentDir(dir:String){ currentDir = dir}
+  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du","cp")
+  var currentPath:Path = new fsPath("~/")
+
+  val absolutePathREGEX = """~/(.*)""".r
+  val hostPathREGEX = """@/(.*)""".r
+  val parentRelativePath = """../(.*)""".r
+  /**
+   * Returns an absolutePath:Path given a canonicalPath (relative to the currentDir)
+   */ 
+  def getAbsolutePathFromCanonical(canonicalPath:String):Path = canonicalPath match {
+    case absolutePathREGEX(canonical) => new fsPath(appendSlash(canonicalPath))
+    case hostPathREGEX(canonical) => new homePath(appendSlash(canonical))
+    case ".." => currentPath match{
+      case fsPath("~/") => currentPath
+      case fsPath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/') 
+        new fsPath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
+      }
+      case homePath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/') 
+        new homePath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
+      }
+    }
+    case parentRelativePath(relativePath) => currentPath match{
+      case fsPath("~/") => new fsPath("~"+relativePath)
+      case fsPath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/')
+        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
+        new fsPath(pathToParent+relativePath)
+      }
+      case homePath(pathToCurrent) => {
+        val pathToCurrentComponents = pathToCurrent.split('/')
+        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
+        new homePath(pathToParent+relativePath)
+      }
+    }
+    case _ => currentPath match {
+      case fsPath(current) => new fsPath(current+appendSlash(canonicalPath))
+      case homePath(current) => new homePath(current+appendSlash(canonicalPath))
+    }
+  }
+    
+  /**
+   * Sets the shell current dir
+   */
+  def setCurrentPath(newPath:Path){ currentPath = newPath}
+
   /**
    * Starts the shell, asks for input, executes the program if it's a system program e.g. "ps" or "ls". If it's a user program, it sends the OS' scheduler the new instanced task.
    */
@@ -126,7 +170,7 @@ class Shell(os:OperatingSystem) {
     val commandSpec:(String,List[String],outputMethod) = command._1 match {
       case asyncRE(programCall,fileName) => {
         val entry = programCall.split(' ').toList
-        val output = new outputMethod(os,true,os.pathToRoot+fileName)
+        val output = new outputMethod(os,true,os.pathToHome+fileName)
         (entry.head,entry.tail,output)
       }
       case _ => {
@@ -152,9 +196,9 @@ class Shell(os:OperatingSystem) {
       if (systemPrograms.contains(commandName)){
         executeSystemProgram(commandName,parameters,output)
         None
-      } else if (isUserProgram(currentDir+commandName)){
+      } else if (isUserProgram(currentPath+commandName)){
         setRegisterValues(parameters)
-        val programToExecute = new userProgram(new File(currentDir+commandName),output)
+        val programToExecute = new userProgram(new File(currentPath+commandName),output)
         Some(programToExecute,priority,npages,output)
       } else{
         throw new exceptions.unknownCommandException(commandName)
@@ -178,10 +222,14 @@ class Shell(os:OperatingSystem) {
   /**
    * Executes a system program e.g. "ps" or "ls"
    */
-  def executeSystemProgram(programName:String,parameters:List[String],output:outputMethod):Unit = {
+  def executeSystemProgram(programName:String,parameters:List[String],output:outputMethod):Unit = {   
     //instance the program
     val systemProgram:system_program = programName match{
-      case "ls" => new ls(os,currentDir,output)
+      case "ls" => parameters.size match {
+        case 0 => new ls(os,currentPath,output) //list current path
+        case 1 => new ls(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        case _ => throw new exceptions.typeMismatchException("ls receveis one parameter at most, received: "+parameters.mkString(","))
+      }
       case "ps" => new ps(os,output)
       case "kill" => {
         if (parameters != 0){
@@ -203,18 +251,38 @@ class Shell(os:OperatingSystem) {
           throw new exceptions.typeMismatchException("Parameters missing for statsgen.")
       }
       case "top" => new top(os,output)
-      case "pwd" => new pwd(currentDir,output)
+      case "pwd" => new pwd(currentPath,output)
       case "mkdir" => 
         if (parameters.size==1)
-          new mkdir(os,currentDir,parameters(0),output)
+          new mkdir(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
           throw new exceptions.typeMismatchException("Mkdir accepts one parameter only")
       case "lsFCB" => new lsFCB(os,output)
       case "cd" => {
         if (parameters.size==1)
-          new cd(os,currentDir,parameters(0),output)
+          new cd(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
-          throw new exceptions.typeMismatchException("cd excepts one parameter only")
+          throw new exceptions.typeMismatchException("cd accepts one parameter only")
+      }
+      case "du" => parameters.size match {
+        case 0 => new du(os,currentPath,output)
+        case 1 => new du(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        case _ => throw new exceptions.typeMismatchException("du accepts no parameters")
+      }
+      case "cat" =>{
+        if (parameters.size==1)
+          new cat(os,getAbsolutePathFromCanonical(parameters(0)),output)
+        else
+          throw new exceptions.typeMismatchException("cd accepts one parameter only")
+      }
+      case "cp" => {
+        if (parameters.size==2){
+          val sourcePath:Path = getAbsolutePathFromCanonical(parameters.head)
+          val destinyPath:Path = getAbsolutePathFromCanonical(parameters.last)
+          new cp(os,sourcePath,destinyPath,output)
+        }else{
+          throw new exceptions.typeMismatchException("cp accepts two parameters")
+        }
       }
     }
     val max_params = systemProgram.number_of_max_params
