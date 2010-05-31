@@ -180,5 +180,5 @@ class FileSystem(pathToFile:String){
     usedFileSizes.reduceLeft(_+_)
   }
 
-  def getSize:Int = 1024*1024
+  def getUserSpaceSize:Int = 1024*1000 //1000 KB
 } //end class FileSystem

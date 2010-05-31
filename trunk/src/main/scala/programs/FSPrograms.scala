@@ -110,20 +110,21 @@ class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extend
   val number_of_max_params =0
   val output = outputObject
 
-  val fsSizeInBytes = os.fs.getSize
+  val fsSizeInBytes = os.fs.getUserSpaceSize
   val freeSpaceInBytes = fsSizeInBytes - os.fs.getSpaceUsedInBytes
   
   //bytes to kilo
   def toKB(bytes:Int):Float = bytes/1024
 
+  def round(f:Float):Float = Math.round(f*1000)/1000
+
   def exec:Unit = {
-     output.println("Total Free space: "+freeSpaceInBytes+" bytes => "+toKB(freeSpaceInBytes)+"KB")
      output.println("Total space: "+fsSizeInBytes+" bytes => "+toKB(fsSizeInBytes)+"KB")
      specifiedPath match {
        case fsPath(path) => {
          val spaceUsedInPath = os.fs.getSpaceInBytesUsedIn(path)
-         val percentageOfTotal:Float = spaceUsedInPath/fsSizeInBytes
-         output.println("Space used in specified path: \n"+spaceUsedInPath+"Bytes => "+toKB(spaceUsedInPath)+"KB ("+percentageOfTotal+"% of total)")
+         val percentageOfTotal:Float = spaceUsedInPath/fsSizeInBytes*100
+         output.println("Space used in specified path: \n"+spaceUsedInPath+"Bytes ~= "+round(toKB(spaceUsedInPath))+"KB ("+round(percentageOfTotal)+"% of total)")
        }
        case _ => output.println("Not yet implemented")
      } 

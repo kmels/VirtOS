@@ -1,5 +1,5 @@
 <sys>
-  <fs path="/Users/kmels/Desarrollo/uvg/cc3002/trunk/FS.txt"/>
+  <fs path="/Users/kmels/Desarrollo/uvg/cc3002/trunk/fs"/>
 <!-- test <fs path="/Users/kmels/Desktop/FS.txt"/> !-->
   <directories>
     <home path="/Users/kmels/Desarrollo/uvg/cc3002/homeDir/"/>
