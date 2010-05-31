@@ -119,12 +119,29 @@ class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extend
   def round(f:Float):Float = Math.round(f*1000)/1000
 
   def exec:Unit = {
-     output.println("Total space: "+fsSizeInBytes+" bytes => "+toKB(fsSizeInBytes)+"KB")
+     output.println("Total space on disk: \t\t\t"+fsSizeInBytes+"Bytes \t "+round(toKB(fsSizeInBytes))+"KB")
      specifiedPath match {
        case fsPath(path) => {
-         val spaceUsedInPath = os.fs.getSpaceInBytesUsedIn(path)
-         val percentageOfTotal:Float = spaceUsedInPath/fsSizeInBytes*100
-         output.println("Space used in specified path: \n"+spaceUsedInPath+"Bytes ~= "+round(toKB(spaceUsedInPath))+"KB ("+round(percentageOfTotal)+"% of total)")
+         //relative to path
+         val realSpaceUsedInPath = os.fs.getSpaceInBytesUsedIn(path)
+         val realSizePercentageOfTotal:Float = realSpaceUsedInPath*100/fsSizeInBytes
+         output.println("Real space used on specified path: \t"+realSpaceUsedInPath+" Bytes \t "+round(toKB(realSpaceUsedInPath))+" KB \t("+round(realSizePercentageOfTotal)+"% of total)")
+         
+         val spaceOnDiskUsedInPath = os.fs.getFileSizeOnDisk(path)
+         val sizeOnDiskPercentageOfTotal:Float = spaceOnDiskUsedInPath*100/fsSizeInBytes
+         output.println("Space on disk used on specified path: \t"+spaceOnDiskUsedInPath+" Bytes \t"+round(toKB(spaceOnDiskUsedInPath))+" KB \t("+round(sizeOnDiskPercentageOfTotal)+"% of total)")
+         
+         val wastedSpaceInPath = spaceOnDiskUsedInPath - realSpaceUsedInPath
+         output.println("Wasted space on specified path: \t"+wastedSpaceInPath+" Bytes \t"+round(toKB(wastedSpaceInPath))+" KB.")
+
+         //totally
+         val totalSpaceOnDiskUsed = os.fs.getFileSizeOnDisk("~/")
+         val totalSpaceOnDiskPercentageOfTotal:Float = totalSpaceOnDiskUsed*100/fsSizeInBytes
+         val freeSpaceOnDisk = fsSizeInBytes-totalSpaceOnDiskUsed
+         val percentageOfFreeSpaceOnDisk:Float = freeSpaceOnDisk*100/fsSizeInBytes
+         output.println("Total space used on disk: \t\t"+totalSpaceOnDiskUsed+" Bytes \t"+round(toKB(totalSpaceOnDiskUsed))+"KB \t("+totalSpaceOnDiskPercentageOfTotal+"%)")
+         output.println("Free space on disk: \t\t\t "+freeSpaceOnDisk+" Bytes \t"+round(toKB(freeSpaceOnDisk))+"KB \t("+percentageOfFreeSpaceOnDisk+"%)")
+         //wasted space
        }
        case _ => output.println("Not yet implemented")
      } 

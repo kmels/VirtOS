@@ -411,10 +411,10 @@ case class FAT(file:RandomAccessFile){
 /**
    * get all allocations from
    */
-  def getAllocationsFrom(blockId:Int):List[Int] = {println("recibio"+blockId) ; table(blockId).nextBlockId match{
+  def getAllocationsFrom(blockId:Int):List[Int] =  table(blockId).nextBlockId match{
     case Some(nextBlock) => blockId::getAllocationsFrom(nextBlock)
     case _ => List(blockId)
-  }}
+  }
 
   def flushFileAllocation(blockIndex:Int):FileAllocation = {
     val allocationIndexInMappedBuffer = blockIndex*3

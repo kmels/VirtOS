@@ -133,14 +133,51 @@ class FileSystem(pathToFile:String){
     if (!fcb.isFile)
       throw new internalFSException("Not a file: "+path)
       
-    val firstBlock = fcb.getFirstBlock
-    println("va a obtener allocatoins desde: "+firstBlock)
-    val blocks = fat.getAllocationsFrom(firstBlock)
+    val blocks = getFileBlockIds(fcb)
     
     val extendedContent = blocks.foldLeft(Array[Byte]())((a,b) => a++data.get(b))
     //yield content only, until EOF, that is the size of the file
     val EOFIndex:Int = fcb.getSize
     extendedContent.slice(0,EOFIndex)   
+  }
+
+  /**
+   * returns the blocks of a given path to file
+   */
+  private def getFileBlockIds(fcb:FileControlBlock):List[Int] = {
+    if (!fcb.isFile)
+      throw new internalFSException("Not a file: "+getPathToFCB(fcb))
+      
+    val firstBlock = fcb.getFirstBlock
+    fat.getAllocationsFrom(firstBlock)
+  }
+
+  /**
+   * returns the size on disk of a given file or directory
+   */
+  def getFileSizeOnDisk(absolutePath:String):Int = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(absolutePath) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+absolutePath)
+    }
+
+    fcb.isFile match {
+      case true => getFileBlockIds(fcb).size*1024
+      case _ => {
+        val fileSizesOnDisk:List[Int] = getDirectoryFiles(absolutePath).map(fcb =>{
+          if (fcb.isFile)
+            getFileBlockIds(fcb).size*1024
+          else
+            getFileSizeOnDisk(getPathToFCB(fcb).path)
+        })
+
+        //sum the file sizes
+        fileSizesOnDisk.size match{
+          case 0 => 0
+          case _ => fileSizesOnDisk.reduceLeft(_+_)
+        }        
+      }
+    }
   }
 
   /**
