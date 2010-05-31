@@ -42,7 +42,6 @@ class FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:L
   def setFirstBlock(firstBlock:Int):Unit = {
     applyPatch(2+32+7,stringToByteArray(extendToRightString(firstBlock.toString,4)),4)
   }
-  
   setFirstBlock(firstBlock)
 
   //set creation and modification date
@@ -313,6 +312,35 @@ case class Directory(file:RandomAccessFile) {
       throw new internalFSException("can't find path to FCB")
     case parentId => new fsPath(getPathToFCB(FCBs(parentId)).path+fcb.getName+"/")
   } //end getPathToFCB
+
+
+  /**
+   * removes a file or a directory, ignoring it's children
+   */
+  def removeFCB(fcbId:Int):Unit = { 
+    println("va a remover fcbid: "+fcbId)
+    //fix parents or sibling
+    val parent:FileControlBlock = FCBs(FCBs(fcbId).getParentId)
+    assert(parent.isDirectory) //it should!
+
+    val isOnlyChild:Boolean = FCBs(fcbId).getSiblingId<0 && parent.getFirstBlock==fcbId
+
+    if (!isOnlyChild){ //update siblings
+       assert(FCBs.exists(_.getSiblingId==fcbId))  //assert on the existence on the older sibling
+      val hasYoungerSibling = FCBs(fcbId).getSiblingId>0
+      
+      if (hasYoungerSibling){ //update older to have it's sibling as fcbIds younger sibling
+        val olderSibling:FileControlBlock =  FCBs.find(_.getSiblingId==fcbId).get //this has to exist since we asserted on its existence before
+        val youngerSiblingId = FCBs(fcbId).getSiblingId
+        FCBs(olderSibling.getId).setSiblingId(youngerSiblingId)
+        flushFCBId(olderSibling.getId)
+      }
+    }
+    
+    //finaly "delete" it
+    FCBs(fcbId) = emptyFCB
+    flushFCBId(fcbId)
+  }
 } //end class Directory
 
 /**

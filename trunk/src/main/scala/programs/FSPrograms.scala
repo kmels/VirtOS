@@ -177,8 +177,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
           val sourceBytes = os.fs.getFileContents(localSourcePath.path)
           //where to copy?
           destinyPath match{
-            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(absoluteLocalPathToDestinyDir+"/"+fileFCB.getName))
-            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(absoluteHomePathToDestinyDir+"/"+fileFCB.getName))
+            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(appendSlash(absoluteLocalPathToDestinyDir)+fileFCB.getName))
+            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(appendSlash(absoluteHomePathToDestinyDir)+fileFCB.getName))
           }
         }
       })
@@ -288,6 +288,16 @@ class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) 
   } 
 }
 
+class rm(os:OperatingSystem,filePath:Path,outputObject:outputMethod) extends system_program {
+  val programName = "rm"
+  val number_of_max_params = 1
+  val output = outputObject
+
+  def exec:Unit = filePath match {
+    case homePath(pathToFile) => {}
+    case fsPath(pathToFile) => os.fs.removeFileOrDirectory(pathToFile)
+  }
+} 
 /*class mount(os:OperatingSystem,pathToFS:Path,mountPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "mount"
   val number_of_max_params = 2

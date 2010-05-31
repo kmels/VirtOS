@@ -6,7 +6,6 @@ import scala.collection.mutable.ArrayBuffer
 import exceptions.internalFSException
 
 class FileSystem(pathToFile:String){
-  val emptyFCB =  new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
   /**
    * Returns a new and clean, empty filesystem, with directory root ~/ created.
   */ 
@@ -171,7 +170,6 @@ class FileSystem(pathToFile:String){
     }
   }
 
-
   /**
    * Returns the space used in this fs.
    */
@@ -181,4 +179,21 @@ class FileSystem(pathToFile:String){
   }
 
   def getUserSpaceSize:Int = 1024*1000 //1000 KB
+
+  /**
+   *Removes a file or a directory, if pathtoFile is a directory, it deletes it's files first.
+   */ 
+  def removeFileOrDirectory(pathToFile:String):Unit = getFCBFromAbsolutePath(pathToFile) match {
+    case Some(file) =>  file.isDirectory match {
+      case true => {
+        println(pathToFile +"is directory!")
+        //delete files first
+        getDirectoryFiles(getPathToFCB(file).path).foreach(fcb => removeFileOrDirectory(getPathToFCB(fcb).path))
+        //delete dir
+        fcbDirectory.removeFCB(file.getId)
+      }
+      case _ => fcbDirectory.removeFCB(file.getId)
+    }
+    case _ => throw internalFSException("file doesnt exist")
+  }
 } //end class FileSystem

@@ -9,7 +9,8 @@ object FS{
   trait Path{val path:String}
   case class fsPath(val path:String) extends Path
   case class homePath(val path:String) extends Path
-
+  
+  val emptyFCB =  new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
   val whitespace:Byte = 32
   val EOF:Byte = whitespace //for compatibility
 
