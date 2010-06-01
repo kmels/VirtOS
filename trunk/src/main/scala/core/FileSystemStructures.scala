@@ -318,16 +318,19 @@ case class Directory(file:RandomAccessFile) {
    * removes a file or a directory, ignoring it's children
    */
   def removeFCB(fcbId:Int):Unit = { 
-    println("va a remover fcbid: "+fcbId)
     //fix parents or sibling
+    if (FCBs(fcbId).getParentId < 0)
+      throw internalFSException("Can't delete root directory")
+
     val parent:FileControlBlock = FCBs(FCBs(fcbId).getParentId)
+        
     assert(parent.isDirectory) //it should!
 
-    val isOnlyChild:Boolean = FCBs(fcbId).getSiblingId<0 && parent.getFirstBlock==fcbId
+    val isFirstChild:Boolean = parent.getFirstBlock==fcbId
+    val hasYoungerSibling = FCBs(fcbId).getSiblingId>0
 
-    if (!isOnlyChild){ //update siblings
+    if (!isFirstChild){ //update siblings
        assert(FCBs.exists(_.getSiblingId==fcbId))  //assert on the existence on the older sibling
-      val hasYoungerSibling = FCBs(fcbId).getSiblingId>0
       
       if (hasYoungerSibling){ //update older to have it's sibling as fcbIds younger sibling
         val olderSibling:FileControlBlock =  FCBs.find(_.getSiblingId==fcbId).get //this has to exist since we asserted on its existence before
@@ -335,10 +338,18 @@ case class Directory(file:RandomAccessFile) {
         FCBs(olderSibling.getId).setSiblingId(youngerSiblingId)
         flushFCBId(olderSibling.getId)
       }
+    }else {      
+      if (!hasYoungerSibling) //is only child
+        //delete parents reference
+        FCBs(parent.getId).setFirstBlock(-1)
+       else //it has some younger sibling, update parent
+        FCBs(parent.getId).setFirstBlock(FCBs(fcbId).getSiblingId)
+
+      flushFCBId(parent.getId)
     }
     
     //finaly "delete" it
-    FCBs(fcbId) = emptyFCB
+    FCBs(fcbId) = new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
     flushFCBId(fcbId)
   }
 } //end class Directory
@@ -381,13 +392,17 @@ case class FAT(file:RandomAccessFile){
     val freeAllocations:Array[(FileAllocation,Int)] = table.zipWithIndex.filter(_._1.isFree)
     val netBlocksNeeded = numberOfBytesToAllocate / 1024
     val blockOffset = if (numberOfBytesToAllocate%1024==0) 0 else 1
-    val blocksNeeded = netBlocksNeeded + blockOffset
+    val blocksNeeded = netBlocksNeeded + blockOffset match {
+      case 0 => 1 //allocate at least 1
+      case neededBlocks => neededBlocks
+    }
 
     if (freeAllocations.size<blocksNeeded)
       throw new internalFSException("not enough space in FAT")
 
     val assignedAllocations = freeAllocations.slice(0,blocksNeeded)
     assert(assignedAllocations.size==blocksNeeded)
+    
 
     val allocations:List[FileAllocation] = assignedAllocations.zipWithIndex.toList.map(zippedAssignedAllocation => {
       val indexOfAssignedAllocation = zippedAssignedAllocation._2
@@ -403,8 +418,7 @@ case class FAT(file:RandomAccessFile){
         table(assignedBlockIndex) = new FileAllocation(assignedBlockIndex,Some(nextAssignedBlockIndex))
         table(assignedBlockIndex)
         flushFileAllocation(assignedBlockIndex)
-      }
-      
+      }      
     })
     allocations
   }
@@ -467,7 +481,11 @@ case class Data(file:RandomAccessFile){
       case 0 => 0
       case _ => 1
     }
-    val blocksNeeded = netBlocksNeededForContent+offsetOfBlocksNeeded
+    val blocksNeeded = netBlocksNeededForContent+offsetOfBlocksNeeded match {
+      case 0 => 1 //at least 1 is needed
+      case neededBlocks => neededBlocks
+    }
+
     assert(blocksNeeded==blocksToUpdate.size)
 
     //extend content, e.g. fill wasted bytes with -1 (simulating an EOF)

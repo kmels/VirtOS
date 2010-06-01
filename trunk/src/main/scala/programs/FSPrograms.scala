@@ -60,7 +60,7 @@ class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extend
   val pathComponents:Array[String] = newDirPath.path.split('/')
   val pathToParent:String = pathComponents.slice(0,pathComponents.size-1).mkString("/") match{
     case "" => ""
-    case somePathToParent => somePathToParent+"/"
+    case somePathToParent => appendSlash(somePathToParent)
   }
   val newDirName:String = pathComponents.last
 
@@ -77,6 +77,7 @@ class lsFCB(os:OperatingSystem,outputObject:outputMethod) extends system_program
 
   def exec:Unit = {
     os.fs.fcbDirectory.FCBs.foreach(println _)
+    os.fs.fat.table.foreach(println _)
   }
 }
 
@@ -148,6 +149,7 @@ class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extend
   }
 }
 class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
+  println("cp recibio: "+absoluteSourcePath+" y "+absoluteDestinyPath)
   val programName = "cp"
   val number_of_max_params = 1
   val output = outputObject
@@ -186,8 +188,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
         if (fileFCB.isDirectory) {
           //make new directory in destiny
           destinyPath match {
-            case fsPath(localPathToDestiny) => copyDir(localSourcePath,new fsPath(localPathToDestiny+"/"+fileFCB.getName))
-            case homePath(homePathToDestiny) => copyDir(localSourcePath,new homePath(homePathToDestiny+"/"+fileFCB.getName))
+            case fsPath(localPathToDestiny) => copyDir(localSourcePath,new fsPath(appendSlash(localPathToDestiny)+fileFCB.getName))
+            case homePath(homePathToDestiny) => copyDir(localSourcePath,new homePath(appendSlash(homePathToDestiny)+fileFCB.getName))
           }
         }else{
           //copy file, 
@@ -216,8 +218,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
           //get path relative to os.pathToHome
           val homePathToSourceDir = file.getAbsolutePath.slice(os.pathToHome.size,file.getAbsolutePath.size)
           destinyPath match {
-            case fsPath(localPathToDestiny) => copyDir(new homePath(homePathToSourceDir),new fsPath(localPathToDestiny+"/"+file.getName))
-            case homePath(homePathToDestiny) => copyDir(new homePath(homePathToSourceDir),new homePath(homePathToDestiny+"/"+file.getName))
+            case fsPath(localPathToDestiny) => copyDir(new homePath(homePathToSourceDir),new fsPath(appendSlash(localPathToDestiny)+file.getName))
+            case homePath(homePathToDestiny) => copyDir(new homePath(homePathToSourceDir),new homePath(appendSlash(homePathToDestiny)+file.getName))
           }
         } else{
           //get file bytes
@@ -225,8 +227,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
           new RandomAccessFile(file,"r").readFully(sourceBytes)
           //where to copy?
           destinyPath match{
-            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(absoluteLocalPathToDestinyDir+"/"+file.getName))
-            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(absoluteHomePathToDestinyDir+"/"+file.getName))
+            case fsPath(absoluteLocalPathToDestinyDir) => copyFileInFS(sourceBytes,new fsPath(appendSlash(absoluteLocalPathToDestinyDir)+file.getName))
+            case homePath(absoluteHomePathToDestinyDir) => copyFileInHome(sourceBytes,new homePath(appendSlash(absoluteHomePathToDestinyDir)+file.getName))
           }
         }
       })

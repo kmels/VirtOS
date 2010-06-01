@@ -277,6 +277,8 @@ class Shell(os:OperatingSystem) {
       }
       case "cp" => {
         if (parameters.size==2){
+          println("parameters: "+parameters)
+          println(parameters.head +" y " +parameters.last)
           val sourcePath:Path = getAbsolutePathFromCanonical(parameters.head)
           val destinyPath:Path = getAbsolutePathFromCanonical(parameters.last)
           new cp(os,sourcePath,destinyPath,output)

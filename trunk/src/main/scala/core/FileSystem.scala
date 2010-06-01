@@ -6,6 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 import exceptions.internalFSException
 
 class FileSystem(pathToFile:String){
+   val emptyFCB = new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
   /**
    * Returns a new and clean, empty filesystem, with directory root ~/ created.
   */ 
@@ -104,7 +105,6 @@ class FileSystem(pathToFile:String){
     val pathToDir:String = pathComponents.slice(0,pathComponents.size-1).mkString("/")
     val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
     val fileSize = content.size
-    
     val allocations:List[FileAllocation] = fat.allocate(content.size)
 
     allocations match{
@@ -223,7 +223,10 @@ class FileSystem(pathToFile:String){
   def removeFileOrDirectory(pathToFile:String):Unit = getFCBFromAbsolutePath(pathToFile) match {
     case Some(file) =>  file.isDirectory match {
       case true => {
-        println(pathToFile +"is directory!")
+        //check that it's not root directory
+        if (file.getId==0)
+          throw internalFSException("Can't delete directory ~/")
+
         //delete files first
         getDirectoryFiles(getPathToFCB(file).path).foreach(fcb => removeFileOrDirectory(getPathToFCB(fcb).path))
         //delete dir
