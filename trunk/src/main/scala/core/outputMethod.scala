@@ -23,7 +23,7 @@ class outputMethod(os:OperatingSystem,isAsynchrounous:Boolean,filePath:Path) ext
   
   val outputFile:AnyRef = outputIsAsynchronous match{
     case true => filePath match{
-      case homePath(pathToFile) => new java.io.PrintStream(new java.io.FileOutputStream(pathToFile))
+      case homePath(pathToFile) => new java.io.PrintStream(new java.io.FileOutputStream(os.pathToHome+pathToFile))
       case fsPath(pathToFile) => os.fs.getFCBFromAbsolutePath(pathToFile) match{
         case Some(fcb) => {
           new FileSystemFile(os.fs,new fsPath(pathToFile))

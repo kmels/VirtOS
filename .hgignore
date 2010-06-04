@@ -1,0 +1,10 @@
+trunk/target/
+/.DS_Store$
+homeDir/
+trunk/logs/
+syntax: glob
+*~
+syntax: regexp
+.*\.orig
+syntax: regexp
+(.*/)?\#[^/]*\#$
