@@ -163,12 +163,13 @@ class Shell(os:OperatingSystem) {
     val commandSpec:(String,List[String],outputMethod) = command._1 match {
       case asyncRE(programCall,fileName) => {
         val entry = programCall.split(' ').toList
-        val output = new outputMethod(os,true,os.pathToHome+fileName)
+        //val output = new outputMethod(os,true,os.pathToHome+fileName)
+        val output = new outputMethod(os,true,getAbsolutePathFromCanonical(fileName))
         (entry.head,entry.tail,output)
       }
       case _ => {
         val entry = command._1.split(' ').toList
-        val output = new outputMethod(os,false,"")
+        val output = new outputMethod(os,false,null)
         (entry.head,entry.tail,output)
       }
     }

@@ -71,10 +71,10 @@ object FS{
       val fileOrDir:Char = buffer(2+32+7+4+32+32).toChar
       if (fileOrDir!='c' && fileOrDir!='a')
         throw new internalFSException("invalid char for file or directory in FCB: "+fileOrDir)
-
       val parentId:Int =  getIntInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4+32+32+1,2+32+7+4+32+32+1+2)))
       
       val siblingId:Int = getIntInstanceFromString(byteArrayToString(buffer.slice(2+32+7+4+32+32+1+2,2+32+7+4+32+32+1+2+2)))
+
       new FileControlBlock(id,name,size,firstBlock,creationDate,modificationDate,fileOrDir,parentId,siblingId)
     } catch {
       case e:java.lang.NumberFormatException => throw new internalFSException("Could not load FCB from buffer: "+buffer.mkString(","))

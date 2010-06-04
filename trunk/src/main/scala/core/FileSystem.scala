@@ -38,7 +38,6 @@ class FileSystem(pathToFile:String){
     newFS.write(emptySequence(72)) // FAT size should be 3KB exactly (72 bytes are lost)
     
     assertEquals("FileSystem.munt, FCBDir + FAT size",newFS.length,256*84+1024*3) //21KB + 4KB of the FAT
-
     val emptyDataBlock = emptySequence(1000*1024)
     newFS.write(emptyDataBlock)
     assertEquals("getNewCleanFS size",newFS.length,1024*1024)
@@ -100,7 +99,7 @@ class FileSystem(pathToFile:String){
   /**
    * Creates a new file where "path" specifies, with contents given by sourceBytes
   */ 
-  def placeNewFile(pathToFile:String,content:Array[Byte]):Unit = {
+  def placeNewFile(pathToFile:String,content:Array[Byte]):FileSystemFile = {
     val pathComponents = pathToFile.split('/')
     val pathToDir:String = pathComponents.slice(0,pathComponents.size-1).mkString("/")
     val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
@@ -114,7 +113,9 @@ class FileSystem(pathToFile:String){
         val blocksToUpdate:List[Int] = allocations.map(_.blockId)
         data.updateBlocksWith(blocksToUpdate,content)
       }
-    }    
+    }
+
+    new FileSystemFile(this,new fsPath(pathToFile))
   }
 
   def getFCBFromAbsolutePath(path:String) = fcbDirectory.getFCBFromAbsolutePath(path)
@@ -134,7 +135,6 @@ class FileSystem(pathToFile:String){
       throw new internalFSException("Not a file: "+path)
       
     val blocks = getFileBlockIds(fcb)
-    
     val extendedContent = blocks.foldLeft(Array[Byte]())((a,b) => a++data.get(b))
     //yield content only, until EOF, that is the size of the file
     val EOFIndex:Int = fcb.getSize
@@ -242,7 +242,6 @@ class FileSystem(pathToFile:String){
    */ 
   def moveFileOrDirectory(pathToSourceFile:String,pathToDestiny:String):Unit = getFCBFromAbsolutePath(pathToSourceFile) match {
     case Some(sourceFCB) => {
-      println(pathToSourceFile + " ... "+pathToDestiny)
       //get path to parent
       val pathToParent = getParentFromPathToFile(pathToDestiny)
       val newFileName = getFileNameFromPathToFile(pathToDestiny)
@@ -253,7 +252,6 @@ class FileSystem(pathToFile:String){
 
       getFCBFromAbsolutePath(pathToParent) match{
         case Some(parentFCB) => {
-          println("papa: "+parentFCB.getName)
           if (parentFCB.isFile)
             throw internalFSException("Invalid operation: Cant move into a file")
           
@@ -263,5 +261,26 @@ class FileSystem(pathToFile:String){
       }                                          
     }
     case _ => throw internalFSException("file doesn't exist: "+pathToSourceFile)  
+  }
+
+  /**
+   * writes to a file in the end
+   */ 
+  def appendContentsToFile(fcb:FileControlBlock,dataToAppend:Array[Byte]):Unit = {
+    val fileSize = fcb.getSize
+    val lastBlockRealSize = fileSize%1024
+
+    val lastBlockId:Int = lastBlockRealSize+dataToAppend.size>1024 match{
+      case true => {
+        println("not yet implemented")
+        -1
+      } //append new block 
+      case _ => getFileBlockIds(fcb).last
+    }       
+    
+    data.appendContentTo(lastBlockId,lastBlockRealSize,dataToAppend)
+    fcbDirectory.setFileSize(fcb.getId,fcb.getSize+dataToAppend.size)    
+    //set modification date
+    fcb.setModificationDate(now)
   }
 } //end class FileSystem

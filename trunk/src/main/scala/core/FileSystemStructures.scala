@@ -36,7 +36,9 @@ class FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:L
   setName(name)
 
   //set size
-  applyPatch(34,stringToByteArray(extendToRightString(size.toString,7)),7)
+  def setSize(newFileSize:Int):Unit = applyPatch(34,stringToByteArray(extendToRightString(newFileSize.toString,7)),7)
+
+  setSize(size)
 
   //set first block, -1 means an empty dir
   def setFirstBlock(firstBlock:Int):Unit = {
@@ -46,7 +48,10 @@ class FileControlBlock(id:Int,name:String,size:Int,firstBlock:Int,creationDate:L
 
   //set creation and modification date
   applyPatch(2+32+7+4,stringToByteArray(extendToRightString(creationDate.toString,32)),32)
-  applyPatch(2+32+7+4+32,stringToByteArray(extendToRightString(modificationDate.toString,32)),32)
+
+  def setModificationDate(timestamp:Long):Unit = applyPatch(2+32+7+4+32,stringToByteArray(extendToRightString(timestamp.toString,32)),32)
+  
+  setModificationDate(modificationDate)
 
   assert(fileOrDir=='a' || fileOrDir=='c')
 
@@ -293,13 +298,11 @@ case class Directory(file:RandomAccessFile) {
    * removes a file or a directory, ignoring it's new FCB, just updates it's parents and siblings, just like "kill fcb"
    */
   def removeFCBAndUpdateSiblings(fcbId:Int):Unit = { 
-    println("killing fcb: "+fcbId)
     //fix parents or sibling
     if (FCBs(fcbId).getParentId < 0)
       throw internalFSException("Can't delete root directory")
 
     val parent:FileControlBlock = FCBs(FCBs(fcbId).getParentId)
-    println("parent: "+parent.getName)
     assert(parent.isDirectory) //it should!
 
     val isFirstChild:Boolean = parent.getFirstBlock==fcbId
@@ -350,8 +353,6 @@ case class Directory(file:RandomAccessFile) {
         flushFCBId(futureParentId)
       }
       case _ => { //parent has at least 1 child
-        println("futuro papa: "+futureParentId)
-        println("hijos del futuro papa: "+getFCBChildren(FCBs(sourceFCBId)).map(a => a.getId).mkString(","))
         val lastSibling:FileControlBlock = getFCBChildren(FCBs(sourceFCBId)).last
         FCBs(lastSibling.getId).setSiblingId(sourceFCBId)
         flushFCBId(lastSibling.getId)
@@ -369,6 +370,15 @@ case class Directory(file:RandomAccessFile) {
     FCBs(fcbId).setName(newFileName)
     flushFCBId(fcbId)
   }
+
+  /**
+   * sets a new file size
+   */
+  def setFileSize(fcbId:Int,newSize:Int):Unit = {
+    FCBs(fcbId).setSize(newSize)
+    flushFCBId(fcbId)
+  }
+
 } //end class Directory
 
 /**
@@ -525,5 +535,20 @@ case class Data(file:RandomAccessFile){
       blocks(blockToUpdateID) = dataBlocks(indexOfUpdatingBlock)
       flushBlock(blockToUpdateID)
     })
+  }
+
+  /**
+   * appends content to a block
+   */
+  def appendContentTo(blockId:Int,indexToStartAppending:Int,data:Array[Byte]):Unit = {
+    if (indexToStartAppending>1023)
+      throw new internalFSException("Cant append, blocks are of size 1024")
+
+    val blockData = get(blockId)    
+    for (i <- 0 until data.size)
+      blockData(i+indexToStartAppending) = data(i)
+
+    blocks(blockId) = new Block(blockData)
+    flushBlock(blockId)
   }
 }

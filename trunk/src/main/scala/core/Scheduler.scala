@@ -333,6 +333,7 @@ class Scheduler(os:OperatingSystem) extends Actor{
             runTask(newTask)
             println("termino act")
           }
+          case _ => exit
         }
       }
     newTaskId

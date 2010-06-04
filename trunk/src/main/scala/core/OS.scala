@@ -66,7 +66,7 @@ class OperatingSystem(pathToConfigurationFile:String){
    */
   val shell = new Shell(this)
   val scheduler = new Scheduler(this)
-  //scheduler.start
+  scheduler.start
   shell.start
   
   /*
@@ -74,23 +74,24 @@ class OperatingSystem(pathToConfigurationFile:String){
    */ 
   def shutDown:Unit = {
     this.isON = false
+    scheduler ! "Stop"
   }
 
-/*
- * Returns the state for a given task id, returns -1 if the task does not exit (or has never existed)
- 
- def getTaskState(taskId:Int):Int =
- if (tasksList.contains(taskId))
- tasksList(taskId).state
- else
- -1*/
- 
+  /*
+   * Returns the state for a given task id, returns -1 if the task does not exit (or has never existed)
+   
+   def getTaskState(taskId:Int):Int =
+   if (tasksList.contains(taskId))
+   tasksList(taskId).state
+   else
+   -1*/
+  
   def getTask(taskId:Int):Task =
     if (tasks.contains(taskId))
       tasks(taskId)
     else
       throw invalidTaskIdentifier(taskId, ", unable to find: has never existed")
- /* 
+  /* 
    def echo(message:String){
    shell.print(message)
    }
@@ -116,26 +117,21 @@ anyUserProgram.parsedLines.size
       case _ => -1
     }
   }
-
   
-    
-
-
-
-def getStateValue(taskId:Int):Int = {
-tasks.get(taskId).get.state
-}
-
-def getEndValue(taskId:Int):Int = {
-if (programResults.contains(taskId))
-programResults.get(taskId).get
-else{
-if (tasks.contains(taskId))
-0
-else
--1
-}
-}
+  def getStateValue(taskId:Int):Int = {
+    tasks.get(taskId).get.state
+  }
+  
+  def getEndValue(taskId:Int):Int = {
+    if (programResults.contains(taskId))
+      programResults.get(taskId).get
+    else{
+      if (tasks.contains(taskId))
+        0
+    else
+      -1
+    }
+  }
   
   /**
    * Funcionality
@@ -193,8 +189,3 @@ else
    */
   def getRealValue(value:String) = if (isRegister(value)) getRegisterValue(value) else value.toInt
 } //end class OperatingSystem
-
-
-
-
-

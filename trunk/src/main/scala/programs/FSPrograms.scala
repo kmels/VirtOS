@@ -162,7 +162,6 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
    */
   private def copyFileInHome(srcBytes:Array[Byte],homePath:homePath):Unit = {
     val absoluteHostPath:String = os.pathToHome+homePath.path
-    println("copiando file en host FS con path: "+absoluteHostPath)
     val file:RandomAccessFile = new RandomAccessFile(new File(absoluteHostPath),"rw")
     file.write(srcBytes) 
   }
