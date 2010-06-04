@@ -77,7 +77,8 @@ class Shell(os:OperatingSystem) {
             }
           } catch{
             case commandNotFound:unknownCommandException => println(commandNotFound.toString)
-            case e => println(e.toString+"\n"+e.getStackTraceString)
+//            case e => println(e.toString+"\n"+e.getStackTraceString)
+            case e => println(e.toString+)
           }
       }
     }
@@ -303,10 +304,7 @@ class Shell(os:OperatingSystem) {
 
   def fileExists(filePath:Path) = filePath match {
     case homePath(pathToFile) => if ((new File (pathToFile)).exists()) true else false
-    case fsPath(pathToFile) => os.fs.getFCBFromAbsolutePath(pathToFile) match {
-      case Some(fcb) => true
-      case _ => false
-    }
+    case fsPath(pathToFile) => os.fs.existsFile(pathToFile)
   }
   
   def println(string:String) = Console.println(string)

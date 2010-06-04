@@ -50,10 +50,12 @@ class pwd(path:Path,outputObject:outputMethod) extends system_program{
   }) 
 }
 
-class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program{
+class mkdir(val os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program with destinyPathValidation{
   val programName = "mkdir"
   val number_of_max_params = 1
   val output = outputObject
+
+  val destinyPath = newDirPath
 
   val pathComponents:Array[String] = newDirPath.path.split('/')
   val pathToParent:String = pathComponents.slice(0,pathComponents.size-1).mkString("/") match{
@@ -146,11 +148,13 @@ class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extend
      } 
   }
 }
-class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
+class cp(val os:OperatingSystem,absoluteSourcePath:Path,val destinyPath:Path,outputObject:outputMethod) extends system_program with destinyPathValidation{
   val programName = "cp"
   val number_of_max_params = 1
   val output = outputObject
   
+  checkForDestinyPathExistence
+  val absoluteDestinyPath = destinyPath
   /**
    * copies a file in local file system of content srcBytes in path
    */
@@ -315,10 +319,12 @@ class rm(os:OperatingSystem,filePath:Path,outputObject:outputMethod) extends sys
 } 
 
 
-class mv(os:OperatingSystem,sourcePath:Path,destinyPath:Path,outputObject:outputMethod) extends system_program{
+class mv(val os:OperatingSystem,sourcePath:Path,val destinyPath:Path,outputObject:outputMethod) extends system_program with destinyPathValidation{
   val programName = "mv"
   val number_of_max_params = 2
   val output = outputObject
+
+  checkForDestinyPathExistence
 
   //when both source and destiny paths are not fsPath (we can't 'move')
   def copyAndRemove:Unit = {
@@ -336,6 +342,20 @@ class mv(os:OperatingSystem,sourcePath:Path,destinyPath:Path,outputObject:output
     case homePath(pathToSource) => copyAndRemove
   }
 }
+
+trait destinyPathValidation{
+  val destinyPath:Path
+  val os:OperatingSystem
+
+  def destinyPathExists = destinyPath match{
+    case homePath(pathToFile) => new File(os.pathToHome+pathToFile).exists
+    case fsPath(pathToFile) => os.fs.existsFile(pathToFile)
+  }
+
+  def checkForDestinyPathExistence:Unit = if (destinyPathExists) throw new internalFSException("File or directory in destiny path already exists: ")
+}
+
+
 /*class mount(os:OperatingSystem,pathToFS:Path,mountPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "mount"
   val number_of_max_params = 2

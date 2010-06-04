@@ -283,4 +283,13 @@ class FileSystem(pathToFile:String){
     //set modification date
     fcb.setModificationDate(now)
   }
+
+
+  /**
+   *
+   */
+  def existsFile(absolutePathToFile:String) = getFCBFromAbsolutePath(absolutePathToFile) match{
+    case Some(fcb) => true
+    case _ => false
+  }
 } //end class FileSystem
