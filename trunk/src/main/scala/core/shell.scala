@@ -5,45 +5,38 @@ import exceptions.{unknownCommandException,typeMismatchException}
 import util.FS._
 
 class Shell(os:OperatingSystem) {
-  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du","cp","rm")
+  val systemPrograms:List[String] = List("ls","ps","kill","debug","statsgen","top","pwd","mkdir","cd","cat","lsFCB","du","cp","rm","mv")
   var currentPath:Path = new fsPath("~/")
 
   val absolutePathREGEX = """~/(.*)""".r
   val hostPathREGEX = """@/(.*)""".r
-  val parentRelativePath = """../(.*)""".r
+  val parentRelativePath = """\.\.(/.*)?""".r
   /**
    * Returns an absolutePath:Path given a canonicalPath (relative to the currentDir)
    */ 
   def getAbsolutePathFromCanonical(canonicalPath:String):Path = canonicalPath match {
     case absolutePathREGEX(canonical) => new fsPath(appendSlash(canonicalPath))
     case hostPathREGEX(canonical) => new homePath(appendSlash(canonical))
-    case ".." => currentPath match{
-      case fsPath("~/") => currentPath
-      case fsPath(pathToCurrent) => {
-        val pathToCurrentComponents = pathToCurrent.split('/') 
-        new fsPath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
+    case parentRelativePath(possiblePathToRelative) => {
+      println(possiblePathToRelative+" <; ")
+      val pathToRelative = possiblePathToRelative match {
+        case null => ""
+        case _ => possiblePathToRelative.substring(1) //take away the "/" <-- don't like this way.
       }
-      case homePath(pathToCurrent) => {
-        val pathToCurrentComponents = pathToCurrent.split('/') 
-        new homePath(appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/")))
-      }
-    }
-    case parentRelativePath(relativePath) => currentPath match{
-      case fsPath("~/") => new fsPath("~"+relativePath)
-      case fsPath(pathToCurrent) => {
-        val pathToCurrentComponents = pathToCurrent.split('/')
-        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
-        new fsPath(pathToParent+relativePath)
-      }
-      case homePath(pathToCurrent) => {
-        val pathToCurrentComponents = pathToCurrent.split('/')
-        val pathToParent = appendSlash(pathToCurrentComponents.slice(0,pathToCurrentComponents.size-1).mkString("/"))
-        new homePath(pathToParent+relativePath)
-      }
+      val parentPath:Path = currentPath match{
+        case fsPath(pathToCurrent) => new fsPath(appendSlash(getParentFromPathToFile(pathToCurrent)))
+        case homePath(pathToCurrent) => new homePath(appendSlash(getParentFromPathToFile(pathToCurrent)))
+      }      
+      //calculate absolutePathFromCanonical using parent path as reference, save the current path
+      val previousCurrentPath = currentPath
+      currentPath = parentPath //use the parent path as reference
+      val newPath = getAbsolutePathFromCanonical(pathToRelative) //get the absolute path as if the current path is the parent's
+      currentPath = previousCurrentPath
+      newPath
     }
     case _ => currentPath match {
-      case fsPath(current) => new fsPath(current+appendSlash(canonicalPath))
-      case homePath(current) => new homePath(current+appendSlash(canonicalPath))
+      case fsPath(current) =>  new fsPath(appendSlash(current+canonicalPath))
+      case homePath(current) => new homePath(appendSlash(current+canonicalPath))
     }
   }
     
@@ -133,7 +126,7 @@ class Shell(os:OperatingSystem) {
     val memoryRE = "m(\\d+)"
     val priorityRE = "p(\\d+)"
 
-    val inputRE = "(.+?)\\s*(m(\\d+)|p(\\d+))?\\s*(m(\\d+)|p(\\d+))?".r
+    val inputRE = """(.+?)\s*( m(\d+)| p(\d+))?\s*( m(\d+)| p(\d+))?""".r
     val command:(String,Int,Int) = input match{
       case inputRE(commandInput,firstSpec,firstSpecMemory,firstSpecPriority,lastSpec,lastSpecMemory,lastSpecPriority) =>{
         val p:Int = if ((firstSpec==null) && (lastSpec==null))
@@ -277,20 +270,25 @@ class Shell(os:OperatingSystem) {
       }
       case "cp" => {
         if (parameters.size==2){
-          println("parameters: "+parameters)
-          println(parameters.head +" y " +parameters.last)
           val sourcePath:Path = getAbsolutePathFromCanonical(parameters.head)
           val destinyPath:Path = getAbsolutePathFromCanonical(parameters.last)
           new cp(os,sourcePath,destinyPath,output)
-        }else{
+        }else
           throw new exceptions.typeMismatchException("cp accepts two parameters")
-        }
       }
       case "rm" => {
         if (parameters.size==1)
           new rm(os,getAbsolutePathFromCanonical(parameters(0)),output)
         else
           throw new exceptions.typeMismatchException("rm accepts one parameter only")
+      }
+      case "mv" => {
+        if (parameters.size==2){
+          val sourcePath:Path = getAbsolutePathFromCanonical(parameters.head)
+          val destinyPath:Path = getAbsolutePathFromCanonical(parameters.last)
+          new mv(os,sourcePath,destinyPath,output)
+        }else
+          throw new typeMismatchException("mv accepts two parameters")
       }
     }
     val max_params = systemProgram.number_of_max_params

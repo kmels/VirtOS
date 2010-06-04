@@ -14,7 +14,7 @@ object FS{
   val whitespace:Byte = 32
   val EOF:Byte = whitespace //for compatibility
 
-  def appendSlash(s:String):String = if (s.endsWith("/")) s else s+"/"
+  def appendSlash(s:String):String = if (s.endsWith("/") || s=="") s else s+"/"
 
   def emptySequence(size:Int):Array[Byte] = ArrayBuffer.fill(size)(whitespace).toArray
 
@@ -29,6 +29,13 @@ object FS{
   def assertEquals(m:String,s1:AnyVal,s2:AnyVal) = if (s1!=s2) println("Failed in "+m+", should be: "+s2+", got "+s1)
 
   def byteFromDigit(d:Int):Byte = d.toString.charAt(0).toByte //Receives a digit and return it's string representation byte e.g. Char 56 would return Byte 8
+
+  def getParentFromPathToFile(p:String) = p match {
+    case "~/" => "~/"
+    case _ => appendSlash(p.split('/').init.mkString("/"))
+  }
+
+  def getFileNameFromPathToFile(p:String) = p.split('/').last
 
   def extendToRightString(s:String,requestedSize:Int):String = {
     assert(s.size<=requestedSize)
@@ -88,5 +95,3 @@ object FS{
     }
   }
 }
-
-

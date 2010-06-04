@@ -46,13 +46,11 @@ class pwd(path:Path,outputObject:outputMethod) extends system_program{
   
   def exec:Unit = output.println(path match {
     case fsPath(localPath) => localPath
-    case homePath(pathToLocal) => "@"+pathToLocal
+    case homePath(pathToLocal) => "@/"+pathToLocal
   }) 
 }
 
 class mkdir(os:OperatingSystem,newDirPath:Path,outputObject:outputMethod) extends system_program{
-  println("making dir: "+newDirPath)
-
   val programName = "mkdir"
   val number_of_max_params = 1
   val output = outputObject
@@ -149,7 +147,6 @@ class du(os:OperatingSystem,specifiedPath:Path,outputObject:outputMethod) extend
   }
 }
 class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,outputObject:outputMethod) extends system_program{
-  println("cp recibio: "+absoluteSourcePath+" y "+absoluteDestinyPath)
   val programName = "cp"
   val number_of_max_params = 1
   val output = outputObject
@@ -157,10 +154,8 @@ class cp(os:OperatingSystem,absoluteSourcePath:Path,absoluteDestinyPath:Path,out
   /**
    * copies a file in local file system of content srcBytes in path
    */
-  private def copyFileInFS(srcBytes:Array[Byte],localPath:fsPath):Unit = {
-    println("copiando file en local FS con path: "+localPath.path)
+  private def copyFileInFS(srcBytes:Array[Byte],localPath:fsPath):Unit = 
     os.fs.placeNewFile(localPath.path,srcBytes)
-  }
 
   /**
    * analog to copyFileINFS but in home fs
@@ -317,6 +312,29 @@ class rm(os:OperatingSystem,filePath:Path,outputObject:outputMethod) extends sys
     case fsPath(pathToFile) => os.fs.removeFileOrDirectory(pathToFile)
   }
 } 
+
+
+class mv(os:OperatingSystem,sourcePath:Path,destinyPath:Path,outputObject:outputMethod) extends system_program{
+  val programName = "mv"
+  val number_of_max_params = 2
+  val output = outputObject
+
+  //when both source and destiny paths are not fsPath (we can't 'move')
+  def copyAndRemove:Unit = {
+    new cp(os,sourcePath,destinyPath,outputObject)
+    new rm(os,sourcePath,outputObject)
+  } 
+
+  def exec:Unit = sourcePath match{
+    case fsPath(pathToSource) => {
+      destinyPath match {
+        case fsPath(pathToDestiny) => os.fs.moveFileOrDirectory(pathToSource,pathToDestiny)
+        case homePath(pathToDestiny) => copyAndRemove
+      }
+    }
+    case homePath(pathToSource) => copyAndRemove
+  }
+}
 /*class mount(os:OperatingSystem,pathToFS:Path,mountPath:Path,outputObject:outputMethod) extends system_program{
   val programName = "mount"
   val number_of_max_params = 2

@@ -6,8 +6,7 @@ import scala.collection.mutable.ArrayBuffer
 import exceptions.internalFSException
 
 class FileSystem(pathToFile:String){
-  val emptyFCB =  new FileControlBlock(-1,".",0,-1,0,0,'a',-1,-1)
- println(emptyFCB.buffer.slice(2+32+7,2+32+7+4).mkString(","))
+   val emptyFCB = new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
   /**
    * Returns a new and clean, empty filesystem, with directory root ~/ created.
   */ 
@@ -16,7 +15,7 @@ class FileSystem(pathToFile:String){
     val newFS = new RandomAccessFile(fsFile,"rw")
        
     //write root directory
-    val rootFCB = new FileControlBlock(0,"~.",0,-1,now,now,'c',-1,-1)
+    val rootFCB = new FileControlBlock(0,"~",0,-1,now,now,'c',-1,-1)
 
     newFS.write(rootFCB.buffer)
 
@@ -77,7 +76,7 @@ class FileSystem(pathToFile:String){
     val fcb:FileControlBlock = fcbDirectory.placeNewDirectory(path,name)
   }
 
-  def getDirectoryContents(absolutePath:String):List[FileControlBlock] = fcbDirectory.getDirectoryContents(absolutePath)    
+  def getDirectoryFiles(absolutePath:String):List[FileControlBlock] = fcbDirectory.getDirectoryContents(absolutePath)    
 
   def getDirectoryFCB(absolutePath:String):Option[FileControlBlock] = {
     fcbDirectory.getFCBFromAbsolutePath(absolutePath) match {
@@ -99,12 +98,176 @@ class FileSystem(pathToFile:String){
   }
 
   /**
-   * Creates a new directory where "path" specifies, named "name" with content "content"
+   * Creates a new file where "path" specifies, with contents given by sourceBytes
   */ 
-/*  def placeFile(path:String,name:String,content:Array[Byte]):Unit = {
-    val fcb:FileControlBlock = fcbDirectory.placeNewFile(path,name)
-    val allocations:List[FileAllocation] = fat.allocate(fcb.firstBlock,content)
-    data.updateBlocksWith(allocations,content)
-  }*/
-  
-}
+  def placeNewFile(pathToFile:String,content:Array[Byte]):Unit = {
+    val pathComponents = pathToFile.split('/')
+    val pathToDir:String = pathComponents.slice(0,pathComponents.size-1).mkString("/")
+    val fileName = pathComponents.slice(pathComponents.size-1,pathComponents.size).mkString
+    val fileSize = content.size
+    val allocations:List[FileAllocation] = fat.allocate(content.size)
+
+    allocations match{
+      case List() => throw new internalFSException("not enough allocations")
+      case List(firstAllocation,_*) => {
+        fcbDirectory.placeNewFile(pathToDir,fileName,fileSize,firstAllocation.blockId)
+        val blocksToUpdate:List[Int] = allocations.map(_.blockId)
+        data.updateBlocksWith(blocksToUpdate,content)
+      }
+    }    
+  }
+
+  def getFCBFromAbsolutePath(path:String) = fcbDirectory.getFCBFromAbsolutePath(path)
+
+  /**
+   * returns the content of a file
+   * @throws internalFSException if path is invalid
+   * @throws internalFSException if specified path is a directory
+   */ 
+  def getFileContents(path:String):Array[Byte] = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(path) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+path)
+    }
+    
+    if (!fcb.isFile)
+      throw new internalFSException("Not a file: "+path)
+      
+    val blocks = getFileBlockIds(fcb)
+    
+    val extendedContent = blocks.foldLeft(Array[Byte]())((a,b) => a++data.get(b))
+    //yield content only, until EOF, that is the size of the file
+    val EOFIndex:Int = fcb.getSize
+    extendedContent.slice(0,EOFIndex)   
+  }
+
+  /**
+   * returns the blocks of a given path to file
+   */
+  private def getFileBlockIds(fcb:FileControlBlock):List[Int] = {
+    if (!fcb.isFile)
+      throw new internalFSException("Not a file: "+getPathToFCB(fcb))
+      
+    val firstBlock = fcb.getFirstBlock
+    fat.getAllocationsFrom(firstBlock)
+  }
+
+  /**
+   * returns the size on disk of a given file or directory
+   */
+  def getFileSizeOnDisk(absolutePath:String):Int = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(absolutePath) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+absolutePath)
+    }
+
+    fcb.isFile match {
+      case true => getFileBlockIds(fcb).size*1024
+      case _ => {
+        val fileSizesOnDisk:List[Int] = getDirectoryFiles(absolutePath).map(fcb =>{
+          if (fcb.isFile)
+            getFileBlockIds(fcb).size*1024
+          else
+            getFileSizeOnDisk(getPathToFCB(fcb).path)
+        })
+
+        //sum the file sizes
+        fileSizesOnDisk.size match{
+          case 0 => 0
+          case _ => fileSizesOnDisk.reduceLeft(_+_)
+        }        
+      }
+    }
+  }
+
+  /**
+   * measures space in bytes for a given path, and returns its value. If it's a directory, it returns the sum of its children size recursively.
+   */
+  def getSpaceInBytesUsedIn(absolutePath:String):Int = {
+    val fcb:FileControlBlock = fcbDirectory.getFCBFromAbsolutePath(absolutePath) match{
+      case Some(fileControlBlock) => fileControlBlock
+      case _ => throw new internalFSException("invalid Path: "+absolutePath)
+    }
+
+    fcb.isFile match {
+      case true => fcb.getSize
+      case _ => {
+        val fileSizes:List[Int] = getDirectoryFiles(absolutePath).map(fcb =>{
+          if (fcb.isFile)
+            fcb.getSize
+          else
+            getSpaceInBytesUsedIn(getPathToFCB(fcb).path)
+        })
+        //sum the file sizes
+        fileSizes.size match{
+          case 0 => 0
+          case _ => fileSizes.reduceLeft(_+_)
+        }        
+      }
+    }
+  }
+
+  /**
+   * Returns the space used in this fs.
+   */
+  def getSpaceUsedInBytes:Int = {
+    val usedFileSizes:List[Int] = fcbDirectory.FCBs.filter(_.getId  > -1).toList.map(_.getSize)
+    usedFileSizes.reduceLeft(_+_)
+  }
+
+  def getUserSpaceSize:Int = 1024*1000 //1000 KB
+
+  /**
+   *Removes a file or a directory, if pathtoFile is a directory, it deletes it's files first.
+   */ 
+  def removeFileOrDirectory(pathToFile:String):Unit = getFCBFromAbsolutePath(pathToFile) match {
+    case Some(file) =>  file.isDirectory match {
+      case true => {
+        //check that it's not root directory
+        if (file.getId==0)
+          throw internalFSException("Can't delete directory ~/")
+
+        //delete files first
+        getDirectoryFiles(getPathToFCB(file).path).foreach(fcb => removeFileOrDirectory(getPathToFCB(fcb).path))
+        //delete dir
+        fcbDirectory.cleanFCB(file.getId)
+      }
+      case _ => fcbDirectory.cleanFCB(file.getId)
+    }
+    case _ => throw internalFSException("file doesnt exist")
+  }
+
+  /**
+   * Moves a file or directory (pathToSourceFile) to another location (pathToDestiny)
+   */ 
+  def moveFileOrDirectory(pathToSourceFile:String,pathToDestiny:String):Unit = getFCBFromAbsolutePath(pathToSourceFile) match {
+    case Some(sourceFCB) => {
+      println(pathToSourceFile + " ... "+pathToDestiny)
+      //get path to parent
+      val pathToParent = getParentFromPathToFile(pathToDestiny)
+      val newFileName = getFileNameFromPathToFile(pathToDestiny)
+      val sourceFileName = getFileNameFromPathToFile(pathToSourceFile)
+
+      if (newFileName!=sourceFileName)
+        fcbDirectory.changeFCBName(sourceFCB.getId,newFileName)
+
+      getFCBFromAbsolutePath(pathToParent) match{
+        case Some(parentFCB) => {
+          println("papa: "+parentFCB.getName)
+          if (parentFCB.isFile)
+            throw internalFSException("Invalid operation: Cant move into a file")
+          
+          fcbDirectory.moveFCB(sourceFCB.getId,parentFCB.getId)
+        }
+        case _ => throw internalFSException("Directory doesn't exist: "+pathToParent)
+      }                                          
+    }
+    case _ => throw internalFSException("file doesn't exist: "+pathToSourceFile)  
+  }
+
+  /**
+   * returns the path to the parent for a given path
+   */ 
+  def getParentPathFromAbsolutePath(
+
+} //end class FileSystem

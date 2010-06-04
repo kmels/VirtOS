@@ -230,10 +230,38 @@ class FileSystem(pathToFile:String){
         //delete files first
         getDirectoryFiles(getPathToFCB(file).path).foreach(fcb => removeFileOrDirectory(getPathToFCB(fcb).path))
         //delete dir
-        fcbDirectory.removeFCB(file.getId)
+        fcbDirectory.cleanFCB(file.getId)
       }
-      case _ => fcbDirectory.removeFCB(file.getId)
+      case _ => fcbDirectory.cleanFCB(file.getId)
     }
     case _ => throw internalFSException("file doesnt exist")
+  }
+
+  /**
+   * Moves a file or directory (pathToSourceFile) to another location (pathToDestiny)
+   */ 
+  def moveFileOrDirectory(pathToSourceFile:String,pathToDestiny:String):Unit = getFCBFromAbsolutePath(pathToSourceFile) match {
+    case Some(sourceFCB) => {
+      println(pathToSourceFile + " ... "+pathToDestiny)
+      //get path to parent
+      val pathToParent = getParentFromPathToFile(pathToDestiny)
+      val newFileName = getFileNameFromPathToFile(pathToDestiny)
+      val sourceFileName = getFileNameFromPathToFile(pathToSourceFile)
+
+      if (newFileName!=sourceFileName)
+        fcbDirectory.changeFCBName(sourceFCB.getId,newFileName)
+
+      getFCBFromAbsolutePath(pathToParent) match{
+        case Some(parentFCB) => {
+          println("papa: "+parentFCB.getName)
+          if (parentFCB.isFile)
+            throw internalFSException("Invalid operation: Cant move into a file")
+          
+          fcbDirectory.moveFCB(sourceFCB.getId,parentFCB.getId)
+        }
+        case _ => throw internalFSException("Directory doesn't exist: "+pathToParent)
+      }                                          
+    }
+    case _ => throw internalFSException("file doesn't exist: "+pathToSourceFile)  
   }
 } //end class FileSystem

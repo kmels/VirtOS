@@ -125,7 +125,6 @@ case class Directory(file:RandomAccessFile) {
   /**
    * Returns a List[FileControlBlock] of the parameter "fcb" reprensenting a file
    */
-
   def getFCBSiblings(fcb:FileControlBlock):List[FileControlBlock] ={
     FCBs.find(_.getId==fcb.getSiblingId && fcb.getSiblingId>0) match{
       case Some(sibling) => sibling::getFCBSiblings(sibling)
@@ -237,30 +236,6 @@ case class Directory(file:RandomAccessFile) {
     case _ => throw new internalFSException("Can't find FCB of "+absolutePath)
   }
 
-
-/*{
-    val parentFCB:Option[FileControlBlock] = getFCBFromAbsolutePath(absolutePath)
-
-    if (!parentFCB.isDirectory)
-      throw new internalFSException("can't create file in "+absolutePath+", directory needed")
-    FCBs.zipWithIndex.find(_._1.getId < 0) match{
-      case Some(freeFCB) => {
-        //update last child of parent
-        val lastChild = getFCBChildren(parentFCB).last
-        
-        
-        //place new FCB
-        val freeFCBIndex = freeFCB._2
-
-        FCBs(freeFCBIndex) = new FileControlBlock(freeFCBIndex,name,size,firstBlock,now,now,'a',parentFCB.getId,-1)
-
-        //return the new FCB
-        FCBs(freeFCBIndex)
-      }
-      case _ => 
-    } 
-  }*/
-
   /**
    * Returns an Option[FileControlBlock] if this path exists (wether a dir or file)
    * canonicalPath:String expresses the relative path from "parentFCB"
@@ -297,7 +272,7 @@ case class Directory(file:RandomAccessFile) {
         case _ => None
       } 
     }
-      
+
     val absolutePathComponents = absolutePath.split('/')
     absolutePathComponents match {
         case Array("~",_*) => getFCBDescendentFrom(absolutePathComponents.tail.mkString("/"),Some(rootDir))
@@ -315,29 +290,32 @@ case class Directory(file:RandomAccessFile) {
 
 
   /**
-   * removes a file or a directory, ignoring it's children
+   * removes a file or a directory, ignoring it's new FCB, just updates it's parents and siblings, just like "kill fcb"
    */
-  def removeFCB(fcbId:Int):Unit = { 
+  def removeFCBAndUpdateSiblings(fcbId:Int):Unit = { 
+    println("killing fcb: "+fcbId)
     //fix parents or sibling
     if (FCBs(fcbId).getParentId < 0)
       throw internalFSException("Can't delete root directory")
 
     val parent:FileControlBlock = FCBs(FCBs(fcbId).getParentId)
-        
+    println("parent: "+parent.getName)
     assert(parent.isDirectory) //it should!
 
     val isFirstChild:Boolean = parent.getFirstBlock==fcbId
     val hasYoungerSibling = FCBs(fcbId).getSiblingId>0
 
-    if (!isFirstChild){ //update siblings
+    if (!isFirstChild){ //update siblings      
        assert(FCBs.exists(_.getSiblingId==fcbId))  //assert on the existence on the older sibling
+        val olderSibling:FileControlBlock =  FCBs.find(_.getSiblingId==fcbId).get //this has to exist since we asserted on its existence before
       
       if (hasYoungerSibling){ //update older to have it's sibling as fcbIds younger sibling
-        val olderSibling:FileControlBlock =  FCBs.find(_.getSiblingId==fcbId).get //this has to exist since we asserted on its existence before
         val youngerSiblingId = FCBs(fcbId).getSiblingId
         FCBs(olderSibling.getId).setSiblingId(youngerSiblingId)
+      }else 
+        FCBs(olderSibling.getId).setSiblingId(-1)      
+
         flushFCBId(olderSibling.getId)
-      }
     }else {      
       if (!hasYoungerSibling) //is only child
         //delete parents reference
@@ -347,9 +325,48 @@ case class Directory(file:RandomAccessFile) {
 
       flushFCBId(parent.getId)
     }
-    
+  }
+
+  /**
+   * cleans a FCB
+   */ 
+  def cleanFCB(fcbId:Int):Unit = {
+    removeFCBAndUpdateSiblings(fcbId)
     //finaly "delete" it
     FCBs(fcbId) = new FileControlBlock(-1,"",0,-1,0,0,'a',-1,-1)
+    flushFCBId(fcbId)
+  }
+  /**
+   *moves FCB from sourcePath to destinyPath
+   */
+  def moveFCB(sourceFCBId:Int,futureParentId:Int):Unit = {
+    removeFCBAndUpdateSiblings(sourceFCBId)
+    FCBs.slice(0,3) foreach println
+
+    //make the parent have the source FCB as a new child
+    FCBs(futureParentId).getFirstBlock match {
+      case -1 => { //parent has no children
+        FCBs(futureParentId).setFirstBlock(sourceFCBId)
+        flushFCBId(futureParentId)
+      }
+      case _ => { //parent has at least 1 child
+        println("futuro papa: "+futureParentId)
+        println("hijos del futuro papa: "+getFCBChildren(FCBs(sourceFCBId)).map(a => a.getId).mkString(","))
+        val lastSibling:FileControlBlock = getFCBChildren(FCBs(sourceFCBId)).last
+        FCBs(lastSibling.getId).setSiblingId(sourceFCBId)
+        flushFCBId(lastSibling.getId)
+      }
+    }
+
+    FCBs(sourceFCBId).setParentId(futureParentId)
+    flushFCBId(sourceFCBId)
+  }
+
+  /**
+   * Changes a FCB name
+   */
+  def changeFCBName(fcbId:Int,newFileName:String):Unit = {
+    FCBs(fcbId).setName(newFileName)
     flushFCBId(fcbId)
   }
 } //end class Directory
