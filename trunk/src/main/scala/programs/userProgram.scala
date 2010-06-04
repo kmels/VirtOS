@@ -4,16 +4,19 @@ import java.io.File
 import core.OperatingSystem
 import exceptions._
 
-class userProgram(fileName:File, outputObject:core.outputMethod) extends program {
-    val programName = fileName.getName
+class userProgram(fileName:String,fileContents:Array[Byte], outputObject:core.outputMethod) extends program {
+    val programName = fileName
     val output = outputObject
 
     override def toString:String = "programName: "+programName
 
     //parse lines
     var parsedLines: List[(Int,List[String])] = Nil
+    
+    val linesZippedWithIndex:List[(String,Int)] = fileContents.map(_.toChar).mkString.split('\n').zipWithIndex.toList
 
-    for (filteredLine <- scala.io.Source.fromFile(fileName, 1000000).getLines().toList.zipWithIndex){
+//    for (filteredLine <- scala.io.Source.fromFile(fileName, 1000000).getLines().toList.zipWithIndex){
+     for (filteredLine <- linesZippedWithIndex){
         val lineValue = filteredLine._1
 
         val parsedLine:List[String] =

@@ -279,22 +279,24 @@ class cat(os:OperatingSystem,absolutePathToFile:Path,outputObject:outputMethod) 
   val number_of_max_params = 1
   val output = outputObject
 
-  def exec:Unit = try {
-    val fileBytes:Array[Byte] = absolutePathToFile match{
-      case fsPath(path) => os.fs.getFileContents(path)
-      case homePath(path) => {    
-        if (!new File(os.pathToHome+path).exists)
-          throw new internalFSException(path+" file: doesn't exist")
+  def getFileBytes:Array[Byte] = absolutePathToFile match{
+    case fsPath(path) => os.fs.getFileContents(path)
+    case homePath(path) => {    
+      if (!new File(os.pathToHome+path).exists)
+        throw new internalFSException(path+" file: doesn't exist")
 
-        if (new File(os.pathToHome+path).isDirectory)
-          throw new internalFSException(path+ " is not a file but a directory")
+      if (new File(os.pathToHome+path).isDirectory)
+        throw new internalFSException(path+ " is not a file but a directory")
 
-        val file:RandomAccessFile = new RandomAccessFile(os.pathToHome+path,"r")
-        val sourceBytes = new Array[Byte](file.length.toInt)
-        file.readFully(sourceBytes)
-        sourceBytes
-      }
+      val file:RandomAccessFile = new RandomAccessFile(os.pathToHome+path,"r")
+      val sourceBytes = new Array[Byte](file.length.toInt)
+      file.readFully(sourceBytes)
+      sourceBytes
     }
+  }
+
+  def exec:Unit = try {
+    val fileBytes:Array[Byte] = getFileBytes
     output.print(fileBytes.map(_.toChar).mkString) 
   } catch {
     case e => output.println(e.toString)

@@ -190,9 +190,12 @@ class Shell(os:OperatingSystem) {
       if (systemPrograms.contains(commandName)){
         executeSystemProgram(commandName,parameters,output)
         None
-      } else if (isUserProgram(currentPath+commandName)){
+      } else if (fileExists(getAbsolutePathFromCanonical(commandName))){
         setRegisterValues(parameters)
-        val programToExecute = new userProgram(new File(currentPath+commandName),output)
+        
+//        val programToExecute = new userProgram(new File(currentPath+commandName),output)
+        val fileContents:Array[Byte] = new cat(os,getAbsolutePathFromCanonical(commandName),output).getFileBytes
+        val programToExecute = new userProgram(commandName,fileContents,output)
         Some(programToExecute,priority,npages,output)
       } else{
         throw new exceptions.unknownCommandException(commandName)
@@ -298,7 +301,13 @@ class Shell(os:OperatingSystem) {
   }
   def print(string:String) = Console.print(string)
 
-  def isUserProgram(pathToFile:String) = if ((new File (pathToFile)).exists()) true else false
+  def fileExists(filePath:Path) = filePath match {
+    case homePath(pathToFile) => if ((new File (pathToFile)).exists()) true else false
+    case fsPath(pathToFile) => os.fs.getFCBFromAbsolutePath(pathToFile) match {
+      case Some(fcb) => true
+      case _ => false
+    }
+  }
   
   def println(string:String) = Console.println(string)
 }
